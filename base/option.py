@@ -1,8 +1,7 @@
 
 class Option(object):
-    """This class defines one the basic types for the
-    backtester -- an option.  Other classes such as 
-    put or call will be derived from this class
+    """This class defines one the basic types for the backtester or live trader -- an option.  
+    Other classes such as put or call will be derived from this class
 
      An option has the following internals
      -Underlying price
@@ -28,6 +27,7 @@ class Option(object):
      -Assignment price
      -Cost to open
      -Cost to close
+     -Trade ID:  used to keep track of trade / may not be needed
 
      Attributes:
        underlyingPrice:  price of the underlying / stock which has option derivatives in dollars

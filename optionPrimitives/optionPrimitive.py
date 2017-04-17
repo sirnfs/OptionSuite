@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 class OptionPrimitive(object):
     """This class is a generic type for any primitive that can be made using
-       a PUT or CALL option, e.g., iron condor or strangle
+       a PUT or CALL option and/or stock, e.g., iron condor or strangle
        Since the primitive is often created prior to having historical data or
        live data, many of the Option fields will be blank until the trade
        is executed
