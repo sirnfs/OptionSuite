@@ -1,4 +1,7 @@
+import pandas as pd
+
 from dataHandler import DataHandler
+
 
 class CsvData(DataHandler):
     """This class handles data from CSV files which will be used
@@ -7,15 +10,11 @@ class CsvData(DataHandler):
     based on the data in the row
     """
 
-    def __init__(self, csvDir, eventQueue):
+    def __init__(self, csvDir):
         """
         csvDir: input CSV directory of files used in backtesting
-        eventQueue: queue which contains different events which can be used
-        in the backtester or live trader; not specific to data handler -- several
-        modules can create and fire off events
         """
         self.__csvDir = csvDir
-        self.__eventQueue = eventQueue
 
     def createEvent(self):
         """Based on the incoming data, an event is created and put
@@ -24,12 +23,22 @@ class CsvData(DataHandler):
         """
         pass
 
-    def openDataSource(self):
+    def openDataSource(self, filename):
         """
         Used to connect to the data source for the first time
         In the case of a CSV, this means opening the file
+        The directory used is determined on init
+        
+        Args:
+        filename:  input CSV file which contains historical data
+
+        Returns:
+        pandas dataframe of loaded CSV file
         """
-        pass
+
+        df = pd.read_csv(self.__csvDir + '/' + filename)
+
+        return df
 
     def getNextTick(self):
         """
@@ -37,3 +46,9 @@ class CsvData(DataHandler):
         For the CSV example, this would likely be the next row of the CSV
         """
         pass
+
+    def getCSVDir(self):
+        """
+        Used to get the name of the CSV directory 
+        """
+        return self.__csvDir

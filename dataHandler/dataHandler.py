@@ -9,14 +9,6 @@ class DataHandler(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def createEvent(self):
-        """Based on the incoming data, an event is created and put
-        into the queue for later processing; e.g., to be used to generate
-        signals
-        """
-        pass
-
-    @abstractmethod
     def openDataSource(self):
         """
         Used to connect to the data source for the first time
