@@ -9,7 +9,7 @@ class TickEvent(EventHandler):
     def __init__(self):
         self.__data = None
 
-    def getDataRef(self):
+    def getData(self):
         return self.__data
 
     def createEvent(self, data):
@@ -18,6 +18,10 @@ class TickEvent(EventHandler):
             data: input data for the event. e.g., row of CSV data
             
         Create a data tick event
+        TODO!!!
+        Need to determine what the incoming data represents -- is it
+        a stock tick, an option tick (put, call), etc.
+        Call data handler to take care of this
         """
         self.__data = data
 

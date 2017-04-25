@@ -24,8 +24,17 @@ class TestTickEvent(unittest.TestCase):
         tickObj = tickEvent.TickEvent()
 
         #Check that the data reference attribute is set to none
-        self.assertEqual(tickObj.getDataRef(), None)
+        self.assertEqual(tickObj.getData(), None)
+
+    def testCreateCSVEvent(self):
+
+        tickObj = tickEvent.TickEvent()
+
+        #Create an event and pass in the row of data
+        tickObj.createEvent(self.data)
+
+        #Check that the data reference, getData(), does not return None
+        self.assertTrue(len(tickObj.getData()) > 0)
 
 if __name__ == '__main__':
     unittest.main()
-

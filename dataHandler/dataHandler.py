@@ -23,3 +23,11 @@ class DataHandler(object):
         For the CSV example, this would likely be the next row of the CSV
         """
         pass
+
+    @abstractmethod
+    def createBaseType(self, inputData):
+        """
+        Used to take a tick (e.g., row from CSV) and create a base type 
+        such as a stock or option (call or put)
+        """
+        pass
