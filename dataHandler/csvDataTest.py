@@ -1,7 +1,5 @@
 import unittest
-
 import csvData
-
 
 class TestCSVHandler(unittest.TestCase):
 
@@ -10,22 +8,22 @@ class TestCSVHandler(unittest.TestCase):
         # Test CSV Handler Initialization
 
         # Create CsvData class object
-        self.csvObj = csvData.CsvData('../sampleData')
+        self.csvObj = csvData.CsvData('./sampleData')
 
     def testCSVHandlerInit(self):
 
         #Check that CSV directory is set
-        self.assertEqual(self.csvObj.getCSVDir(), '../sampleData')
+        self.assertEqual(self.csvObj.getCSVDir(), './sampleData')
 
-    #def testCSVLoad(self):
+    def testCSVLoad(self):
 
         #Load sample CSV file from sampleData directory into
         #pandas dataframe
-        #dataProvider = 'iVolatility'
-        #df = self.csvObj.openDataSource('aapl_sample_ivolatility.csv', dataProvider)
+        dataProvider = 'iVolatility'
 
-        #Check that the first element in 'ask' column is 40.450
-        #self.assertEqual(df['ask'].iloc[0], 40.450)
+        self.csvObj.openDataSource('aapl_sample_ivolatility.csv', dataProvider)
+
+        data = self.csvObj.getNextTick()
 
 if __name__ == '__main__':
     unittest.main()

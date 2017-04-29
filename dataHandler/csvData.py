@@ -1,4 +1,5 @@
 import pandas as pd
+import datetime
 from dataHandler import DataHandler
 from base import stock
 from base import call
@@ -40,6 +41,8 @@ class CsvData(DataHandler):
         Returns:
         pandas dataframe of loaded CSV file
         """
+        #TODO:  Check that the CSV from the dataprovider has the right number of columns;
+        # otherwise raise exception and quit
         try:
             self.__dataFrame = pd.read_csv(self.__csvDir + '/' + filename)
             self.__dataAvailable = True
@@ -65,10 +68,15 @@ class CsvData(DataHandler):
                 return curRowData
 
             # Create a base data type -- stock, put, or call
-            self.createBaseType(curRowData)
-
-            # Increment to the next row
-            self.__curRow += 1
+            baseType = self.createBaseType(curRowData)
+            if  baseType != None:
+                # Increment to the next row
+                self.__curRow += 1
+                return baseType
+            else:
+                # Increment to the next row
+                self.__curRow += 1
+                return None
 
         else:
             return None
@@ -85,7 +93,46 @@ class CsvData(DataHandler):
         such as a stock or option (call or put)
         """
         if self.__dataProvider == "iVolatility":
-            pass
+            #CSV header
+            #symbol, exchange, company_name, date, stock_price_close, option_symbol, expiration_date, strike,
+            #call_put, style, ask, bid, mean_price, settlement, iv, volume, open_interest, stock_price_for_iv,
+            #isinterpolated, delta, vega, gamma, theta, rho
+
+            #Do type checking on fields
+            underlyingTicker = inputData['symbol']
+
+            #Check that underlyingTicker is a character string
+            if not underlyingTicker.isalpha():
+                return None
+
+            #Check that strike price and delta is a number
+            try:
+                strikePrice = float(inputData['strike'])
+                delta = float(inputData['delta'])
+            except:
+                return None
+
+            #Convert expiration date to a datetime Python object
+            try:
+                DTE = datetime.datetime.strptime(inputData['expiration_date'], "%m/%d/%Y")
+            except:
+                return None
+
+            call_put = inputData['call_put']
+
+            if call_put == 'C':
+                #def __init__(self, underlyingTicker, strikePrice, delta, DTE, longOrShort=None, underlyingPrice=None,
+                # optionSymbol=None, optionAlias=None, bidPrice=None, askPrice=None, openInterest=None,
+                # volume=None, dateTime=None, theta=None, gamma=None, rho=None, vega=None, impliedVol=None,
+                # exchangeCode=None, exercisePrice=None, assignPrice=None, openCost=None, closeCost=None, tradeID=None)
+                return call.Call(underlyingTicker, strikePrice, delta, DTE)
+
+            elif call_put == 'P':
+                return put.Put(underlyingTicker, strikePrice, delta, DTE)
+
+            else:
+                return None
+
         else:
             print("Unrecognized CSV data source provider")
             raise

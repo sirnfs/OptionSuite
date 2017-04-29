@@ -5,7 +5,7 @@ class TestCallOption(unittest.TestCase):
     def testCallOptionCreation(self):
 
         #Create CALL option
-        callOption = call.Call('SPY', 250, 'Long', 0.3, 45)
+        callOption = call.Call('SPY', 250, 0.3, 45)
 
         self.assertEqual(callOption.getStrikePrice(), 250)
         self.assertEqual(callOption.getUnderlyingTicker(), 'SPY')

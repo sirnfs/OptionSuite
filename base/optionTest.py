@@ -8,7 +8,7 @@ class TestOptionsClass(unittest.TestCase):
         #We should not be able to instantitate the Option class
         failed = False
         try:
-            classObj = option.Option('SPY', 250, 'PUT', 0, 0.3, 45)
+            classObj = option.Option('SPY', 250, 'PUT', 0.3, 45)
         except NotImplementedError:
             failed = True
 

@@ -58,7 +58,7 @@ class Option(object):
                  the tradeID is associated with both the strategy and the options in the strategy
      """
 
-    def __init__(self, underlyingTicker, strikePrice, optionType, longOrShort, delta, DTE,
+    def __init__(self, underlyingTicker, strikePrice, optionType, delta, DTE, longOrShort=None,
                  underlyingPrice=None, optionSymbol=None, optionAlias=None, bidPrice=None,
                  askPrice=None, openInterest=None, volume=None, dateTime=None, theta=None,
                  gamma=None, rho=None, vega=None, impliedVol=None, exchangeCode=None,
