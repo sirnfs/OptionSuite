@@ -41,14 +41,17 @@ class CsvData(DataHandler):
         Returns:
         pandas dataframe of loaded CSV file
         """
-        #TODO:  Check that the CSV from the dataprovider has the right number of columns;
-        # otherwise raise exception and quit
+
         try:
             self.__dataFrame = pd.read_csv(self.__csvDir + '/' + filename)
             self.__dataAvailable = True
             self.__dataProvider = dataProvider
         except IOError:
             print("Unable to open data source")
+            raise
+
+        if len(self.__dataFrame.columns) != 24:
+            print("CSV did not have right number of columns")
             raise
 
     def getNextTick(self):
@@ -101,14 +104,33 @@ class CsvData(DataHandler):
             #Do type checking on fields
             underlyingTicker = inputData['symbol']
 
+            exchange = inputData['exchange']
+            optionSymbol = inputData['option_symbol']
+
+            #Check if style is American or European
+            style = inputData['style']
+            if style != 'A' and style != 'E':
+                return None
+
             #Check that underlyingTicker is a character string
             if not underlyingTicker.isalpha():
                 return None
 
-            #Check that strike price and delta is a number
+            #Check that fields below are floating point numbers
             try:
                 strikePrice = float(inputData['strike'])
+                underlyingPrice = float(inputData['stock_price_close'])
+                askPrice = float(inputData['ask'])
+                bidPrice = float(inputData['bid'])
+                impliedVol = float(inputData['iv'])
+                volume = float(inputData['volume'])
+                openInterest = int(inputData['open_interest'])
                 delta = float(inputData['delta'])
+                theta = float(inputData['theta'])
+                vega = float(inputData['vega'])
+                gamma = float(inputData['gamma'])
+                rho = float(inputData['rho'])
+
             except:
                 return None
 
@@ -125,10 +147,14 @@ class CsvData(DataHandler):
                 # optionSymbol=None, optionAlias=None, bidPrice=None, askPrice=None, openInterest=None,
                 # volume=None, dateTime=None, theta=None, gamma=None, rho=None, vega=None, impliedVol=None,
                 # exchangeCode=None, exercisePrice=None, assignPrice=None, openCost=None, closeCost=None, tradeID=None)
-                return call.Call(underlyingTicker, strikePrice, delta, DTE)
+                return call.Call(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
+                                 None, bidPrice, askPrice, openInterest, volume, None, theta, gamma, rho, vega,
+                                 impliedVol, exchange, None, None, None, None, None)
 
             elif call_put == 'P':
-                return put.Put(underlyingTicker, strikePrice, delta, DTE)
+                return put.Put(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
+                               None, bidPrice, askPrice, openInterest, volume, None, theta, gamma, rho, vega,
+                               impliedVol, exchange, None, None, None, None, None)
 
             else:
                 return None

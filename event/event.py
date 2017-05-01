@@ -25,8 +25,3 @@ class EventHandler(object):
         e.g., delete a data tick event from the CSV handler
         """
         pass
-
-
-
- #Check if queue is empty
- #       self.assertEqual(self.eventQ.empty(), True)

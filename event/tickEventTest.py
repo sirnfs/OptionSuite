@@ -13,10 +13,11 @@ class TestTickEvent(unittest.TestCase):
     def setUp(self):
 
         # Create CsvData class object
+        dataProvider = 'iVolatility'
         self.csvObj = csvData.CsvData('../sampleData')
-        df = self.csvObj.openDataSource('aapl_sample_ivolatility.csv')
-        #Grab a single row from the dataframe, df
-        self.data = df.ix[0]
+        self.csvObj.openDataSource('aapl_sample_ivolatility.csv', dataProvider)
+        #Grab a row of data from the csv
+        self.data = self.csvObj.getNextTick()
 
     def testCreateTickEvent(self):
 
@@ -26,15 +27,18 @@ class TestTickEvent(unittest.TestCase):
         #Check that the data reference attribute is set to none
         self.assertEqual(tickObj.getData(), None)
 
-    def testCreateCSVEvent(self):
+    def testCreateTickCSVEvent(self):
 
         tickObj = tickEvent.TickEvent()
 
         #Create an event and pass in the row of data
         tickObj.createEvent(self.data)
 
-        #Check that the data reference, getData(), does not return None
-        self.assertTrue(len(tickObj.getData()) > 0)
+        #Get data from the first row of CSV
+        data = tickObj.getData()
+
+        #Check the underlying price
+        self.assertTrue(data.getUnderlyingPrice(), 94.48)
 
 if __name__ == '__main__':
     unittest.main()

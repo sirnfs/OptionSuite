@@ -24,6 +24,7 @@ class TestCSVHandler(unittest.TestCase):
         self.csvObj.openDataSource('aapl_sample_ivolatility.csv', dataProvider)
 
         data = self.csvObj.getNextTick()
+        self.assertEqual(data.getUnderlyingPrice(), 94.48)
 
 if __name__ == '__main__':
     unittest.main()
