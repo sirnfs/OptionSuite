@@ -4,6 +4,7 @@ from dataHandler import DataHandler
 from base import stock
 from base import call
 from base import put
+from event import tickEvent
 
 
 class CsvData(DataHandler):
@@ -12,22 +13,26 @@ class CsvData(DataHandler):
     The purpose of this class is to get handle CSV data operations
     """
 
-    def __init__(self, csvDir):
+    def __init__(self, csvDir, filename, dataProvider, eventQueue):
         """
         csvDir: input CSV directory of files used in backtesting
+        filename:  filename of CSV to process
         curRow: current row we are processing in the CSV
         dataAvailable:  indicates the data source has been opened successfully
         dataFrame:  pandas dataframe which contains the CSV
         dataProvider:  historical data provider (e.g, provider of CSV)
+        eventQueue:  location to place new data tick event
         """
         self.__csvDir = csvDir
         self.__curRow = 0
         self.__dataAvailable = False
         self.__dataFrame = None
-        # TODO:  need to use enum here for dataProvider
-        self.__dataProvider = None
+        self.__dataProvider = dataProvider
+        self.__eventQueue = eventQueue
 
-    def openDataSource(self, filename, dataProvider):
+        self.openDataSource(filename)
+
+    def openDataSource(self, filename):
         """
         Used to connect to the data source for the first time
         In the case of a CSV, this means opening the file
@@ -35,8 +40,6 @@ class CsvData(DataHandler):
         
         Args:
         filename:  input CSV file which contains historical data
-        dataProvider:  historical data provider -- this is needed since
-        formats will different from one provider to the next
 
         Returns:
         pandas dataframe of loaded CSV file
@@ -45,7 +48,6 @@ class CsvData(DataHandler):
         try:
             self.__dataFrame = pd.read_csv(self.__csvDir + '/' + filename)
             self.__dataAvailable = True
-            self.__dataProvider = dataProvider
         except IOError:
             print("Unable to open data source")
             raise
@@ -68,21 +70,31 @@ class CsvData(DataHandler):
                 curRowData = self.__dataFrame.ix[self.__curRow]
             except:
                 curRowData = None
-                return curRowData
+                #return curRowData
 
             # Create a base data type -- stock, put, or call
             baseType = self.createBaseType(curRowData)
             if  baseType != None:
+
+                #Create event and add to queue
+                event = tickEvent.TickEvent()
+                event.createEvent(baseType)
+                self.__eventQueue.put(event)
+
                 # Increment to the next row
                 self.__curRow += 1
-                return baseType
+
+                #return baseType
             else:
                 # Increment to the next row
                 self.__curRow += 1
-                return None
+                #TODO:  need to do some action here
+                #return None
 
         else:
-            return None
+            #TODO:  Need to do something here
+            pass
+            #return None
 
     def getCSVDir(self):
         """

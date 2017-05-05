@@ -1,30 +1,25 @@
 import unittest
 import csvData
+import Queue as queue
 
 class TestCSVHandler(unittest.TestCase):
-
-    #Used to set up the unittest class
-    def setUp(self):
-        # Test CSV Handler Initialization
-
-        # Create CsvData class object
-        self.csvObj = csvData.CsvData('./sampleData')
-
-    def testCSVHandlerInit(self):
-
-        #Check that CSV directory is set
-        self.assertEqual(self.csvObj.getCSVDir(), './sampleData')
 
     def testCSVLoad(self):
 
         #Load sample CSV file from sampleData directory into
         #pandas dataframe
         dataProvider = 'iVolatility'
+        directory = './sampleData'
+        filename = 'aapl_sample_ivolatility.csv'
+        eventQueue = queue.Queue()
 
-        self.csvObj.openDataSource('aapl_sample_ivolatility.csv', dataProvider)
+        csvObj = csvData.CsvData(directory, filename, dataProvider, eventQueue)
 
-        data = self.csvObj.getNextTick()
-        self.assertEqual(data.getUnderlyingPrice(), 94.48)
+        #Get row of CSV data
+        csvObj.getNextTick()
+        event = eventQueue.get()
+        dataObj = event.getData()
+        self.assertEqual(dataObj.getUnderlyingPrice(), 94.48)
 
 if __name__ == '__main__':
     unittest.main()

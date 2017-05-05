@@ -8,6 +8,7 @@ class TickEvent(EventHandler):
 
     def __init__(self):
         self.__data = None
+        self.type = 'TICK'
 
     def getData(self):
         return self.__data

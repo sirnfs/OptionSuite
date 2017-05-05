@@ -14,10 +14,12 @@ class TestTickEvent(unittest.TestCase):
 
         # Create CsvData class object
         dataProvider = 'iVolatility'
-        self.csvObj = csvData.CsvData('../sampleData')
-        self.csvObj.openDataSource('aapl_sample_ivolatility.csv', dataProvider)
+        directory = '../sampleData'
+        filename = 'aapl_sample_ivolatility.csv'
+
+        csvObj = csvData.CsvData(directory, filename, dataProvider)
         #Grab a row of data from the csv
-        self.data = self.csvObj.getNextTick()
+        self.data = csvObj.getNextTick()
 
     def testCreateTickEvent(self):
 
