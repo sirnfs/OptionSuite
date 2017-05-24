@@ -12,6 +12,8 @@ class Strategy(object):
          
          optional attributes:
          
+         optimalDTE:  optimal number of days before expiration to put on strategy
+         minimumDTE:  minimum number of days before expiration to put on strategy
          roc:  return on capital for overall trade
          minDaysToEarnings:  minimum number of days to put on trade before earnings
          minCredit:  minimum credit to collect on overall trade
@@ -24,9 +26,10 @@ class Strategy(object):
          minIVR:  minimum implied volatility rank needed to put on strategy
      """
 
-     def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, closeDateTime, roc=None,
-                  minDaysToEarnings=None, minCredit=None, maxBuyingPower=None, profitTargetPercent=None,
-                  avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None, minIVR=None):
+     def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, closeDateTime, optimalDTE=None,
+                  minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
+                  profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None,
+                  minIVR=None):
 
          """Inits Strategy class with constructor data.  We check to make sure that
          the user doesn't try to instantiate the Strategy class"""
@@ -41,6 +44,8 @@ class Strategy(object):
          self.__underlying = underlying
          self.__orderQuantity = orderQuantity
          self.__closeDateTime = closeDateTime
+         self.__optimalDTE = optimalDTE
+         self.__minimumDTE = minimumDTE
          self.__roc = roc
          self.__minDaysToEarnings = minDaysToEarnings
          self.__minCredit = minCredit
