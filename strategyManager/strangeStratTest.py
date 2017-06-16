@@ -1,11 +1,12 @@
-import strategy
+import unittest
+import strangleStrat
+from datetime import datetime
+from pytz import timezone
 
-class StrangleStrat(strategy.Strategy):
-    """This class sets up the basics for a SPECIFIC strategy that will be used;
-       In this case, we set up the strangle strategy, which involves buying or
-       selling strangles with certain parameters
-       
-       Strangle specific attributes:
+class TestStrangleStrategy(unittest.TestCase):
+    def testStrangleStratCreation(self):
+        """Create instance of strangle strategy
+           Strangle specific attributes:
            optCallDelta:  optimal delta for call, usually around 16 delta
            maxCallDelta:  max delta for call, usually around 30 delta
            optPutDelta:  optimal delta for put, usually around 16 delta
@@ -34,33 +35,38 @@ class StrangleStrat(strategy.Strategy):
             maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
             minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy
             minIVR:  minimum implied volatility rank needed to put on strategy
-    """
+           """
 
-    def __init__(self, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
-                 underlying, orderQuantity, daysBeforeClose, optimalDTE=None,
-                 minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
-                 profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None,
-                 minIVR=None):
+        #Create strangle strategy object
+        optCallDelta = 16  # integers or floats?
+        maxCallDelta = 30
+        optPutDelta = 16
+        maxPutDelta = 30
+        startTime = datetime.now(timezone('US/Eastern'))
+        buyOrSell = 1  # 0 = buy, 1 = sell (currently only support selling)
+        underlying = 'AAPL'
+        orderQuantity = 1
+        daysBeforeClose = 5
+        optimalDTE = 45
+        minimumDTE = 25
+        minCredit = 0.5
+        maxBuyingPower = 4000
+        profitTargetPercent = 50
+        maxBidAsk = 0.05
+        minDaysToEarnings = 25
+        minDaysSinceEarnings = 3
+        minIVR = 15
+        curStrategy = strangleStrat.StrangleStrat(optCallDelta, maxCallDelta, optPutDelta, maxPutDelta,
+                                                 startTime, buyOrSell, underlying, orderQuantity,
+                                                 daysBeforeClose, optimalDTE=optimalDTE, minimumDTE=minimumDTE,
+                                                 minDaysToEarnings=minDaysToEarnings, minCredit=minCredit,
+                                                 maxBuyingPower=maxBuyingPower,
+                                                 profitTargetPercent=profitTargetPercent,
+                                                 maxBidAsk=maxBidAsk,
+                                                 minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
 
-        self.__strategy = "strangle"
-        self.__optCallDelta = optCallDelta
-        self.__maxCallDelta = maxCallDelta
-        self.__optPutDelta = optPutDelta
-        self.__maxPutDelta = maxPutDelta
 
-        strategy.Strategy.__init__(self, startTime, self.__strategy, buyOrSell, underlying, orderQuantity,
-                                   daysBeforeClose, optimalDTE=None, minimumDTE=None, roc=None, minDaysToEarnings=None,
-                                   minCredit=None, maxBuyingPower=None, profitTargetPercent=None, avoidAssignment=None,
-                                   maxBidAsk=None, minDaysSinceEarnings=None, minIVR=None)
+        self.assertEqual(curStrategy.getOptimalCallDelta(), 16)
 
-    def getOptimalCallDelta(self):
-        return self.__optCallDelta
-
-    def getMaxCallDelta(self):
-        return self.__maxCallDelta
-
-    def getOptimalPutDelta(self):
-        return self.__optPutDelta
-
-    def getMaxPutDelta(self):
-        return self.__maxPutDelta
+if __name__ == '__main__':
+    unittest.main()

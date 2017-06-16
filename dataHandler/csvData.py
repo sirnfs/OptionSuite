@@ -146,9 +146,10 @@ class CsvData(DataHandler):
             except:
                 return None
 
-            #Convert expiration date to a datetime Python object
+            #Convert current date and expiration date to a datetime Python object
             try:
                 DTE = datetime.datetime.strptime(inputData['expiration_date'], "%m/%d/%Y")
+                dateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%Y")
             except:
                 return None
 
@@ -160,13 +161,13 @@ class CsvData(DataHandler):
                 # volume=None, dateTime=None, theta=None, gamma=None, rho=None, vega=None, impliedVol=None,
                 # exchangeCode=None, exercisePrice=None, assignPrice=None, openCost=None, closeCost=None, tradeID=None)
                 return call.Call(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
-                                 None, bidPrice, askPrice, openInterest, volume, None, theta, gamma, rho, vega,
-                                 impliedVol, exchange, None, None, None, None, None)
+                                 None, bidPrice, askPrice, openInterest, volume, dateTime, theta, gamma, rho, vega,
+                                 impliedVol, exchange)
 
             elif call_put == 'P':
                 return put.Put(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
-                               None, bidPrice, askPrice, openInterest, volume, None, theta, gamma, rho, vega,
-                               impliedVol, exchange, None, None, None, None, None)
+                               None, bidPrice, askPrice, openInterest, volume, dateTime, theta, gamma, rho, vega,
+                               impliedVol, exchange)
 
             else:
                 return None

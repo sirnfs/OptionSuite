@@ -1,5 +1,8 @@
 import Queue as queue
 from dataHandler import csvData
+import strangleStrat
+from datetime import datetime
+from pytz import timezone
 
 """
 This file contains a basic strategy example, and can be though of 
@@ -19,8 +22,34 @@ class BackTestSession(object):
         dataProvider = 'iVolatility'
         self.eventQueue = queue.Queue()
         self.dataHandler = csvData.CsvData(inputDir, fileSource, dataProvider, self.eventQueue)
-        #All of the configuration / settings for the strategy are in the class itself
-        #self.strategyManger = strangleStrategy()
+
+        #Parameters for strangle strategy -- TODO: move params to file
+        optCallDelta = 16 #integers or floats?
+        maxCallDelta = 30
+        optPutDelta = 16
+        maxPutDelta = 30
+        startTime = datetime.now(timezone('US/Eastern'))
+        buyOrSell = 1 #0 = buy, 1 = sell (currently only support selling)
+        underlying = 'AAPL'
+        orderQuantity = 1
+        daysBeforeClose = 5
+        optimalDTE = 45
+        minimumDTE = 25
+        minCredit = 0.5
+        maxBuyingPower = 4000
+        profitTargetPercent = 50
+        maxBidAsk = 0.05
+        minDaysToEarnings = 25
+        minDaysSinceEarnings = 3
+        minIVR = 15
+        self.strategyManager = strangleStrat.StrangleStat(optCallDelta, maxCallDelta, optPutDelta, maxPutDelta,
+                                                          startTime, buyOrSell, underlying, orderQuantity,
+                                                          daysBeforeClose, optimalDTE=optimalDTE, minimumDTE=minimumDTE,
+                                                          minDaysToEarnings=minDaysToEarnings, minCredit=minCredit,
+                                                          maxBuyingPower=maxBuyingPower,
+                                                          profitTargetPercent=profitTargetPercent,
+                                                          maxBidAsk=maxBidAsk,
+                                                          minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
         #self.__portfolio = portfolio()
         #self.__orderExecution = orderExecution()
         #self.__riskManagement = riskManagement()

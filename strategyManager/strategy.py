@@ -5,10 +5,10 @@ class Strategy(object):
      Attributes:
          startDateTime:  date/time to start the live trading or backtest
          strategy:  option strategy to use -- e.g., iron condor, strangle
-         buyOrSell:  do we buy an iron condor or sell an iron condor?
+         buyOrSell:  do we buy an iron condor or sell an iron condor? 0 = buy, 1 = sell
          underlying:  which underlying to use for the strategy
          orderQuantity:  number of strangles, iron condors, etc
-         closeDate:  latest date / time to wait before closing the trade (generally before expiration)
+         daysBeforeClose:  number of days before expiration to close the trade
          
          optional attributes:
          
@@ -26,7 +26,7 @@ class Strategy(object):
          minIVR:  minimum implied volatility rank needed to put on strategy
      """
 
-     def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, closeDateTime, optimalDTE=None,
+     def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, optimalDTE=None,
                   minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
                   profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None,
                   minIVR=None):
@@ -43,7 +43,7 @@ class Strategy(object):
          self.__buyOrSell = buyOrSell
          self.__underlying = underlying
          self.__orderQuantity = orderQuantity
-         self.__closeDateTime = closeDateTime
+         self.__daysBeforeClose = daysBeforeClose
          self.__optimalDTE = optimalDTE
          self.__minimumDTE = minimumDTE
          self.__roc = roc
@@ -56,4 +56,53 @@ class Strategy(object):
          self.__minDaysSinceEarnings = minDaysSinceEarnings
          self.__minIVR = minIVR
 
-      #TODO:  add getters and setters for attributes above
+     def getStartTime(self):
+         return self.__startTime
+
+     def getStrategyName(self):
+         return self.__strategy
+
+     def getBuyOrSell(self):
+         return self.__buyOrSell
+
+     def getUnderlying(self):
+         return self.__underlying
+
+     def getOrderQuantity(self):
+         return self.__orderQuantity
+
+     def getDaysBeforeClose(self):
+         return self.__daysBeforeClose
+
+     def getOptimalDTE(self):
+         return self.__optimalDTE
+
+     def getMinimumDTE(self):
+         return self.__minimumDTE
+
+     def getROC(self):
+         return self.__roc
+
+     def getMinDaysToEarnings(self):
+         return self.__minDaysToEarnings
+
+     def getMinCredit(self):
+         return self.__minCredit
+
+     def getMaxBuyingPower(self):
+         return self.__maxBuyingPower
+
+     def getProfitTargetPercent(self):
+         return self.__profitTargetPercent
+
+     def getAvoidAssignmentFlag(self):
+         return self.__avoidAssignment
+
+     def getMaxBidAsk(self):
+         return self.__maxBidAsk
+
+     def getMinDaysSinceEarnings(self):
+         return self.__minDaysSinceEarnings
+
+     def getMinIVR(self):
+         return self.__minIVR
