@@ -18,6 +18,7 @@ class CsvData(DataHandler):
         csvDir: input CSV directory of files used in backtesting
         filename:  filename of CSV to process
         curRow: current row we are processing in the CSV
+        curTimeData:  the time information for the current option chain tick
         dataAvailable:  indicates the data source has been opened successfully
         dataFrame:  pandas dataframe which contains the CSV
         dataProvider:  historical data provider (e.g, provider of CSV)
@@ -25,6 +26,7 @@ class CsvData(DataHandler):
         """
         self.__csvDir = csvDir
         self.__curRow = 0
+        self.__curTimeDate = None
         self.__dataAvailable = False
         self.__dataFrame = None
         self.__dataProvider = dataProvider
@@ -47,14 +49,85 @@ class CsvData(DataHandler):
 
         try:
             self.__dataFrame = pd.read_csv(self.__csvDir + '/' + filename)
-            self.__dataAvailable = True
         except IOError:
             print("Unable to open data source")
             raise
 
+        self.__dataAvailable = True
+
         if len(self.__dataFrame.columns) != 24:
             print("CSV did not have right number of columns")
             raise
+
+    def getOptionChain(self):
+        """
+        Used to get the option chain data for the underlying;
+        The option chain consists of all of the puts and calls
+        at all strikes currently listed for the underlying
+        Returns true/false depending on whether or not we successfully
+        were able to get the option chain data.  On success, the
+        the rows of the option chain are converted into option objects,
+        and the objects are put into the eventQueue as one event
+        """
+
+        #Attempt to get option chain from CSV -- the way we determine
+        #which strikes / data belong to the option chain for the current
+        #tick is by keeping track of the time/date
+
+        #Used to store all rows in current option chain
+        optionChain = []
+
+        #Used to store objects created for each row of the option chain
+        optionChainObjs = []
+
+        #Potentially different data providers will have to be handled differently
+        #TODO:  This should be abstracted out so that date/time maps to the right
+        #column header for different data providers
+        if self.__dataProvider == "iVolatility":
+
+            #Get the first N rows with the same time/date
+            #To do this, we get the time/data from the first row, and then
+            #we add to this any rows with the same date/time
+
+            #Handle first row -- add to optionChain
+            try:
+                optionChain.append(self.__dataFrame.iloc[self.__curRow])
+                self.__curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
+            except:
+                return False
+
+            self.__curRow += 1
+
+            #TODO:  replace this while loop with something more efficient --
+            #for example, can select all dates from dataframe and then iterate
+            #through them; we would need to keep track of the curRow still so we
+            #can get the next option chain.  We do it in this manner since this
+            #seems that it would be faster if we had a HUGE CSV and tried to
+            #do a bunch of groups for different dates
+            while 1:
+                try:
+                    curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
+                except:
+                    break
+
+                if curTimeDate == self.__curTimeDate:
+                    optionChain.append(self.__dataFrame.iloc[self.__curRow])
+                    self.__curRow +=1
+                else:
+                    break
+
+                print(self.__curRow)
+
+            #Convert option chain to base types (calls, puts)
+            for row in optionChain:
+                optionChainObjs.append(self.createBaseType(row))
+
+            # Create event and add to queue
+            event = tickEvent.TickEvent()
+            event.createEvent(optionChainObjs)
+            self.__eventQueue.put(event)
+
+            return True
 
     def getNextTick(self):
         """

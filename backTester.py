@@ -1,6 +1,6 @@
 import Queue as queue
 from dataHandler import csvData
-import strangleStrat
+from strategyManager import strangleStrat
 from datetime import datetime
 from pytz import timezone
 
@@ -17,7 +17,7 @@ class BackTestSession(object):
     def __init__(self):
 
         #Parameters for CSV data for backtesting session
-        inputDir = '../sampleData'
+        inputDir = './sampleData'
         fileSource = 'aapl_sample_ivolatility.csv'
         dataProvider = 'iVolatility'
         self.eventQueue = queue.Queue()
@@ -42,7 +42,7 @@ class BackTestSession(object):
         minDaysToEarnings = 25
         minDaysSinceEarnings = 3
         minIVR = 15
-        self.strategyManager = strangleStrat.StrangleStat(optCallDelta, maxCallDelta, optPutDelta, maxPutDelta,
+        self.strategyManager = strangleStrat.StrangleStrat(optCallDelta, maxCallDelta, optPutDelta, maxPutDelta,
                                                           startTime, buyOrSell, underlying, orderQuantity,
                                                           daysBeforeClose, optimalDTE=optimalDTE, minimumDTE=minimumDTE,
                                                           minDaysToEarnings=minDaysToEarnings, minCredit=minCredit,
@@ -68,7 +68,7 @@ def run(session):
                 if event.type == 'TICK':
                     pass
                     #self.cur_time = event.time
-                    #self.strategyManager.checkForSignal(event)
+                    session.strategyManager.checkForSignal(event)
                     #self.portfolio_handler.update_portfolio_value()
                     #self.statistics.update(event.time, self.portfolio_handler)
                 elif event.type == 'SIGNAL':

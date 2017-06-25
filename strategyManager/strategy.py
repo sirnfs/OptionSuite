@@ -106,3 +106,6 @@ class Strategy(object):
 
      def getMinIVR(self):
          return self.__minIVR
+
+     def checkForSignal(self, event):
+         raise NotImplementedError("Each strategy must implement the 'checkForSignal' method")

@@ -49,9 +49,9 @@ class StrangleStrat(strategy.Strategy):
         self.__maxPutDelta = maxPutDelta
 
         strategy.Strategy.__init__(self, startTime, self.__strategy, buyOrSell, underlying, orderQuantity,
-                                   daysBeforeClose, optimalDTE=None, minimumDTE=None, roc=None, minDaysToEarnings=None,
-                                   minCredit=None, maxBuyingPower=None, profitTargetPercent=None, avoidAssignment=None,
-                                   maxBidAsk=None, minDaysSinceEarnings=None, minIVR=None)
+                                   daysBeforeClose, optimalDTE, minimumDTE, roc, minDaysToEarnings,
+                                   minCredit, maxBuyingPower, profitTargetPercent, avoidAssignment,
+                                   maxBidAsk, minDaysSinceEarnings, minIVR)
 
     def getOptimalCallDelta(self):
         return self.__optCallDelta
@@ -64,3 +64,8 @@ class StrangleStrat(strategy.Strategy):
 
     def getMaxPutDelta(self):
         return self.__maxPutDelta
+
+    #Check if input data meets criteria for strangle strategy
+    def checkForSignal(self, event):
+        eventData = event.getData()
+        return eventData
