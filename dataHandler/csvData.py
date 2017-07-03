@@ -4,8 +4,7 @@ from dataHandler import DataHandler
 from base import stock
 from base import call
 from base import put
-from event import tickEvent
-
+from events import tickEvent
 
 class CsvData(DataHandler):
     """This class handles data from CSV files which will be used
@@ -94,6 +93,7 @@ class CsvData(DataHandler):
                 optionChain.append(self.__dataFrame.iloc[self.__curRow])
                 self.__curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
             except:
+                self.__curRow += 1
                 return False
 
             self.__curRow += 1
@@ -116,8 +116,6 @@ class CsvData(DataHandler):
                 else:
                     break
 
-                print(self.__curRow)
-
             #Convert option chain to base types (calls, puts)
             for row in optionChain:
                 optionChainObjs.append(self.createBaseType(row))
@@ -132,42 +130,18 @@ class CsvData(DataHandler):
     def getNextTick(self):
         """
         Used to get the next available piece of data from the data source
-        For the CSV example, this would likely be the next row of the CSV
+        For the CSV example, this would likely be the next row or option chain
         """
 
         # Check that data source has been opened
         if self.__dataAvailable:
 
-            # Attempt to get data from CSV at row __curRow
-            try:
-                curRowData = self.__dataFrame.ix[self.__curRow]
-            except:
-                curRowData = None
-                #return curRowData
-
-            # Create a base data type -- stock, put, or call
-            baseType = self.createBaseType(curRowData)
-            if  baseType != None:
-
-                #Create event and add to queue
-                event = tickEvent.TickEvent()
-                event.createEvent(baseType)
-                self.__eventQueue.put(event)
-
-                # Increment to the next row
-                self.__curRow += 1
-
-                #return baseType
-            else:
-                # Increment to the next row
-                self.__curRow += 1
-                #TODO:  need to do some action here
-                #return None
+            #Get option chain and create event
+            self.getOptionChain()
 
         else:
-            #TODO:  Need to do something here
+            #No event will be created, so nothing to do here.
             pass
-            #return None
 
     def getCSVDir(self):
         """
@@ -221,8 +195,8 @@ class CsvData(DataHandler):
 
             #Convert current date and expiration date to a datetime Python object
             try:
-                DTE = datetime.datetime.strptime(inputData['expiration_date'], "%m/%d/%Y")
-                dateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%Y")
+                DTE = datetime.datetime.strptime(inputData['expiration_date'], "%m/%d/%y")
+                curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%y")
             except:
                 return None
 
@@ -234,12 +208,12 @@ class CsvData(DataHandler):
                 # volume=None, dateTime=None, theta=None, gamma=None, rho=None, vega=None, impliedVol=None,
                 # exchangeCode=None, exercisePrice=None, assignPrice=None, openCost=None, closeCost=None, tradeID=None)
                 return call.Call(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
-                                 None, bidPrice, askPrice, openInterest, volume, dateTime, theta, gamma, rho, vega,
+                                 None, bidPrice, askPrice, openInterest, volume, curDateTime, theta, gamma, rho, vega,
                                  impliedVol, exchange)
 
             elif call_put == 'P':
                 return put.Put(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
-                               None, bidPrice, askPrice, openInterest, volume, dateTime, theta, gamma, rho, vega,
+                               None, bidPrice, askPrice, openInterest, volume, curDateTime, theta, gamma, rho, vega,
                                impliedVol, exchange)
 
             else:
