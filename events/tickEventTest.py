@@ -15,7 +15,7 @@ class TestTickEvent(unittest.TestCase):
         #Check that the data reference attribute is set to none
         self.assertEqual(tickObj.getData(), None)
 
-        #Check that right type if set
+        #Check that right type is set
         self.assertEqual(tickObj.type, 'TICK')
 
 if __name__ == '__main__':
