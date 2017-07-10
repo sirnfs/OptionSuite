@@ -11,10 +11,11 @@ class Strategy(object):
          daysBeforeClose:  number of days before expiration to close the trade
          
          optional attributes:
-         
+
+         expCycle:  specifies if we want to do monthly ('m'); unspecified means we can do weekly, quarterly, etc
          optimalDTE:  optimal number of days before expiration to put on strategy
          minimumDTE:  minimum number of days before expiration to put on strategy
-         roc:  return on capital for overall trade
+         roc:  minimal return on capital for overall trade as a decimal
          minDaysToEarnings:  minimum number of days to put on trade before earnings
          minCredit:  minimum credit to collect on overall trade
          maxBuyingPower:  maximum buying power to use on overall trade
@@ -26,10 +27,10 @@ class Strategy(object):
          minIVR:  minimum implied volatility rank needed to put on strategy
      """
 
-     def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, optimalDTE=None,
-                  minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
-                  profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None,
-                  minIVR=None):
+     def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, expCycle=None,
+                  optimalDTE=None, minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None,
+                  maxBuyingPower=None, profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None,
+                  minDaysSinceEarnings=None, minIVR=None):
 
          """Inits Strategy class with constructor data.  We check to make sure that
          the user doesn't try to instantiate the Strategy class"""
@@ -44,6 +45,7 @@ class Strategy(object):
          self.__underlying = underlying
          self.__orderQuantity = orderQuantity
          self.__daysBeforeClose = daysBeforeClose
+         self.__expCycle = expCycle
          self.__optimalDTE = optimalDTE
          self.__minimumDTE = minimumDTE
          self.__roc = roc
@@ -73,6 +75,9 @@ class Strategy(object):
 
      def getDaysBeforeClose(self):
          return self.__daysBeforeClose
+
+     def getExpCycle(self):
+         return self.__expCycle
 
      def getOptimalDTE(self):
          return self.__optimalDTE

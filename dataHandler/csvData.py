@@ -1,5 +1,6 @@
 import pandas as pd
 import datetime
+import pytz
 from dataHandler import DataHandler
 from base import stock
 from base import call
@@ -195,8 +196,14 @@ class CsvData(DataHandler):
 
             #Convert current date and expiration date to a datetime Python object
             try:
+                local = pytz.timezone('US/Eastern')
+                #Convert time zone of data 'US/Eastern' to UTC time
                 DTE = datetime.datetime.strptime(inputData['expiration_date'], "%m/%d/%y")
+                DTE = local.localize(DTE, is_dst=None)
+                DTE = DTE.astimezone(pytz.utc)
                 curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%y")
+                curDateTime = local.localize(curDateTime, is_dst=None)
+                curDateTime = curDateTime.astimezone(pytz.utc)
             except:
                 return None
 
