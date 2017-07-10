@@ -1,5 +1,7 @@
 import strategy
 from events import signalEvent
+from datetime import datetime
+import pytz
 
 class StrangleStrat(strategy.Strategy):
     """This class sets up the basics for a SPECIFIC strategy that will be used;
@@ -23,9 +25,10 @@ class StrangleStrat(strategy.Strategy):
 
             optional attributes:
 
+            expCycle:  specifies if we want to do monthly ('m'); unspecified means we can do weekly, quarterly, etc
             optimalDTE:  optimal number of days before expiration to put on strategy
             minimumDTE:  minimum number of days before expiration to put on strategy
-            roc:  return on capital for overall trade
+            roc:  minimal return on capital for overall trade as a decimal
             minDaysToEarnings:  minimum number of days to put on trade before earnings
             minCredit:  minimum credit to collect on overall trade
             maxBuyingPower:  maximum buying power to use on overall trade
@@ -38,10 +41,26 @@ class StrangleStrat(strategy.Strategy):
     """
 
     def __init__(self, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
-                 underlying, orderQuantity, daysBeforeClose, optimalDTE=None,
+                 underlying, orderQuantity, daysBeforeClose, expCycle=None, optimalDTE=None,
                  minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
                  profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None,
                  minIVR=None):
+
+        #For arguments that are not supported or don't have implementations, we return an exception to prevent confusion
+        if not roc == None:
+            raise NotImplementedError, "Specifying ROC currently not supported"
+
+        if not minDaysToEarnings == None or not minDaysSinceEarnings == None:
+            raise NotImplementedError, "Ability to filter out dates with respect to earnings currently not supported"
+
+        if not avoidAssignment == None:
+            raise NotImplementedError, "Strategy for avoiding assignment currently not implemented / supported"
+
+        if not minIVR == None:
+            raise NotImplementedError, "Specifying implied volatility rank currently not implemented / supported"
+
+        if not maxBuyingPower == None:
+            raise NotImplementedError, "Specifying max buying power not implemented / supported"
 
         self.__strategy = "strangle"
         self.__optCallDelta = optCallDelta
@@ -50,7 +69,7 @@ class StrangleStrat(strategy.Strategy):
         self.__maxPutDelta = maxPutDelta
 
         strategy.Strategy.__init__(self, startTime, self.__strategy, buyOrSell, underlying, orderQuantity,
-                                   daysBeforeClose, optimalDTE, minimumDTE, roc, minDaysToEarnings,
+                                   daysBeforeClose, expCycle, optimalDTE, minimumDTE, roc, minDaysToEarnings,
                                    minCredit, maxBuyingPower, profitTargetPercent, avoidAssignment,
                                    maxBidAsk, minDaysSinceEarnings, minIVR)
 
@@ -65,7 +84,6 @@ class StrangleStrat(strategy.Strategy):
 
     def getMaxPutDelta(self):
         return self.__maxPutDelta
-
 
     def checkForSignal(self, event):
         """Criteria that we need to check before generating a signal event:
@@ -83,9 +101,10 @@ class StrangleStrat(strategy.Strategy):
         daysBeforeClose:  number of days before expiration to close the trade
 
         Optional:
+        expCycle:  specifies if we want to do monthly ('m'); unspecified means we can do weekly, quarterly, etc
         optimalDTE:  optimal number of days before expiration to put on strategy
         minimumDTE:  minimum number of days before expiration to put on strategy
-        roc:  return on capital for overall trade
+        roc:  minimal return on capital for overall trade as a decimal
         minDaysToEarnings:  minimum number of days to put on trade before earnings
         minCredit:  minimum credit to collect on overall trade
         maxBuyingPower:  maximum buying power to use on overall trade
@@ -111,10 +130,40 @@ class StrangleStrat(strategy.Strategy):
 
         #Process one option at a time from the option chain (now objects of option class)
         for option in eventData:
+
             #First check if the option is a call or a put
             if option.getOptionType() == 'CALL':
-                pass
+                if self.getExpCycle() == 'm': #monthly options specified
+                    if not self.isMonthlyExp(option.getDTE()):
+                        continue
+
+                #Check min DTE
+                if not self.getMinimumDTE() == None:
+                    if not self.hasMinimumDTE(option.getDTE()):
+                        continue
+
+
+
             elif option.getOptionType() == 'PUT':
                 pass
 
+        #Must check that CALL and PUT are in the same expiration
+
         return eventData
+
+    def isMonthlyExp(self, dateTime):
+        '''
+        Check if the option expiration falls on the third Friday of the month, or if the third Friday is a holiday,
+        check if the expiration falls on the Thursday that preceeds it
+        :param dateTime: option expiration date in mm/dd/yy format
+        :return: true if it's a monthly option; false otherwise
+        '''
+        return ((dateTime.weekday() == 4 or dateTime.weekday() == 3) and 14 < dateTime.day < 22)
+
+    def hasMinimumDTE(self, dateTime):
+        '''
+        Determine if the current expiration date of the option is >= self.minimumDTE days from the current date
+        :param dateTime:  option expiration date in mm/dd/yy format
+        :return: true if difference between current date and dateTime is >= self.minimumDTE; else false
+        '''
+        return (dateTime - datetime.now(pytz.utc)).days >= self.getMinimumDTE()

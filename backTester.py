@@ -28,7 +28,7 @@ class BackTestSession(object):
         maxCallDelta = 30
         optPutDelta = 16
         maxPutDelta = 30
-        startTime = datetime.now(timezone('US/Eastern'))
+        startTime = datetime.utcnow()#datetime.now(timezone('US/Eastern'))
         buyOrSell = 1 #0 = buy, 1 = sell (currently only support selling)
         underlying = 'AAPL'
         orderQuantity = 1

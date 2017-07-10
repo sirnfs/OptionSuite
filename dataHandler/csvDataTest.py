@@ -2,6 +2,7 @@ import unittest
 import csvData
 import Queue as queue
 import datetime
+import pytz
 
 class TestCSVHandler(unittest.TestCase):
 
@@ -35,7 +36,11 @@ class TestCSVHandler(unittest.TestCase):
         self.assertEqual(optionType, 'CALL')
 
         curDateTime = firstOption.getDateTime()
-        self.assertEqual(curDateTime, datetime.datetime.strptime('8/7/14', "%m/%d/%y"))
+        local = pytz.timezone('US/Eastern')
+        dateTime = datetime.datetime.strptime('8/7/14', "%m/%d/%y")
+        dateTime = local.localize(dateTime, is_dst=None)
+        dateTime = dateTime.astimezone(pytz.utc)
+        self.assertEqual(curDateTime, dateTime)
 
         #Get option chain for the second date/time from CSV
         self.csvObj.getOptionChain()
@@ -54,7 +59,11 @@ class TestCSVHandler(unittest.TestCase):
         self.assertEqual(optionType, 'CALL')
 
         curDateTime = firstOption.getDateTime()
-        self.assertEqual(curDateTime, datetime.datetime.strptime('8/8/14', "%m/%d/%y"))
+        local = pytz.timezone('US/Eastern')
+        dateTime = datetime.datetime.strptime('8/8/14', "%m/%d/%y")
+        dateTime = local.localize(dateTime, is_dst=None)
+        dateTime = dateTime.astimezone(pytz.utc)
+        self.assertEqual(curDateTime, dateTime)
 
 if __name__ == '__main__':
     unittest.main()
