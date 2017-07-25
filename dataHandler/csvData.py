@@ -59,6 +59,9 @@ class CsvData(DataHandler):
             print("CSV did not have right number of columns")
             raise
 
+        #Close file
+
+
     def getOptionChain(self):
         """
         Used to get the option chain data for the underlying;

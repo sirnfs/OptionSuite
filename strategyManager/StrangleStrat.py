@@ -1,6 +1,6 @@
 import strategy
 from events import signalEvent
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 class StrangleStrat(strategy.Strategy):
@@ -40,7 +40,7 @@ class StrangleStrat(strategy.Strategy):
             minIVR:  minimum implied volatility rank needed to put on strategy
     """
 
-    def __init__(self, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
+    def __init__(self, eventQueue, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
                  underlying, orderQuantity, daysBeforeClose, expCycle=None, optimalDTE=None,
                  minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
                  profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None,
@@ -62,6 +62,7 @@ class StrangleStrat(strategy.Strategy):
         if not maxBuyingPower == None:
             raise NotImplementedError, "Specifying max buying power not implemented / supported"
 
+        self.__eventQueue = eventQueue
         self.__strategy = "strangle"
         self.__optCallDelta = optCallDelta
         self.__maxCallDelta = maxCallDelta
@@ -126,7 +127,9 @@ class StrangleStrat(strategy.Strategy):
         #These temporary variables will be used to keep track of the optimal options as we go through the options
         #chain
         optimalCallOpt = []
+        optimalCallDelta = None
         optimalPutOpt = []
+        optimalPutDelta = None
 
         #Process one option at a time from the option chain (now objects of option class)
         for option in eventData:
@@ -139,31 +142,88 @@ class StrangleStrat(strategy.Strategy):
 
                 #Check min DTE
                 if not self.getMinimumDTE() == None:
-                    if not self.hasMinimumDTE(option.getDTE()):
+                    if not self.hasMinimumDTE(option.getDateTime(), option.getDTE()):
                         continue
 
+                #Check that call delta is less or equal to than max call delta specified
+                if not option.getDelta() <= self.getMaxCallDelta():
+                    continue
 
+                #Check if optimalCallDelta has been set from a previous iteration;
+                #If the current iteration has a delta closer to optCallDelta, save this option
+                if optimalCallDelta == None:
+                    optimalCallOpt = option
+                    optimalCallDelta = option.getDelta()
+                    #print('Call found at delta {}'.format(option.getDelta()))
+                else:
+                    curDelta = option.getDelta()
+                    optCurDelta = self.getOptimalCallDelta()
+                    if abs(curDelta - optCurDelta) <  abs(optimalCallDelta - optCurDelta):
+                        optimalCallOpt = option
+                        optimalCallDelta = option.getDelta()
 
             elif option.getOptionType() == 'PUT':
-                pass
+                if self.getExpCycle() == 'm': #monthly options specified
+                    if not self.isMonthlyExp(option.getDTE()):
+                        continue
 
-        #Must check that CALL and PUT are in the same expiration
+                #Check min DTE
+                if not self.getMinimumDTE() == None:
+                    if not self.hasMinimumDTE(option.getDateTime(), option.getDTE()):
+                        continue
 
-        return eventData
+                #Check that put delta is greater than or equal to max put delta specified
+                if not option.getDelta() >= self.getMaxPutDelta():
+                    continue
+
+                #Check if optimalPutDelta has been set from a previous iteration;
+                #If the current iteration has a delta closer to optPutDelta, save this option
+                if optimalPutDelta == None:
+                    optimalPutOpt = option
+                    optimalPutDelta = option.getDelta()
+                    #print('Put found at delta {}'.format(option.getDelta()))
+                else:
+                    curDelta = option.getDelta()
+                    optCurDelta = self.getOptimalPutDelta()
+                    if abs(curDelta - optCurDelta) <  abs(optimalPutDelta - optCurDelta):
+                        optimalPutOpt = option
+                        optimalPutDelta = option.getDelta()
+
+        #Must check that a CALL and PUT were found which meet criteria and are in the same expiration
+        if optimalPutOpt and optimalCallOpt and optimalPutOpt.getDTE() == optimalCallOpt.getDTE():
+            #Temporarily add the optimal put and optimal call to an array for testing; we will create
+            #a strangle option primitive in the actual system; the strangle primitive will have several of the
+            #arguments from the init of StrangleStrat class
+            tempData = [optimalPutOpt, optimalCallOpt]
+            #Create signal event to put on strangle strategy and add to queue
+            event = signalEvent.SignalEvent()
+            event.createEvent(tempData)
+            #self.__eventQueue.put(event)
+
+        #return eventData
 
     def isMonthlyExp(self, dateTime):
         '''
         Check if the option expiration falls on the third Friday of the month, or if the third Friday is a holiday,
         check if the expiration falls on the Thursday that preceeds it
+        Technically, the option expire on a Saturday, so we need to subtract a day from the date and check if the day
+        is the third friday of the month
         :param dateTime: option expiration date in mm/dd/yy format
         :return: true if it's a monthly option; false otherwise
         '''
-        return ((dateTime.weekday() == 4 or dateTime.weekday() == 3) and 14 < dateTime.day < 22)
 
-    def hasMinimumDTE(self, dateTime):
+        #Subtract one from expiration date to get the Friday before expiration (independent of holidays)
+        adjustDate = dateTime - timedelta(days=1)
+
+        return (adjustDate.weekday() == 4 and 14 < adjustDate.day < 22)
+
+        #return ((dateTime.weekday() == 4 or dateTime.weekday() == 3) and 14 < dateTime.day < 22)
+
+    def hasMinimumDTE(self, curDateTime, expDateTime):
         '''
         Determine if the current expiration date of the option is >= self.minimumDTE days from the current date
-        :param dateTime:  option expiration date in mm/dd/yy format
+        :param curDateTime: current date in mm/dd/yy format
+        :param expDateTime: option expiration date in mm/dd/yy format
         :return: true if difference between current date and dateTime is >= self.minimumDTE; else false
         '''
-        return (dateTime - datetime.now(pytz.utc)).days >= self.getMinimumDTE()
+        return (expDateTime - curDateTime).days >= self.getMinimumDTE()

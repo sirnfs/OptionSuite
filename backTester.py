@@ -2,8 +2,7 @@ import Queue as queue
 from dataHandler import csvData
 from strategyManager import strangleStrat
 from datetime import datetime
-from pytz import timezone
-
+import pytz
 """
 This file contains a basic strategy example, and can be though of 
 as an end-to-end test of the whole Backtester project
@@ -28,7 +27,7 @@ class BackTestSession(object):
         maxCallDelta = 30
         optPutDelta = 16
         maxPutDelta = 30
-        startTime = datetime.utcnow()#datetime.now(timezone('US/Eastern'))
+        startTime = datetime.now(pytz.utc)
         buyOrSell = 1 #0 = buy, 1 = sell (currently only support selling)
         underlying = 'AAPL'
         orderQuantity = 1
@@ -42,14 +41,13 @@ class BackTestSession(object):
         minDaysToEarnings = 25
         minDaysSinceEarnings = 3
         minIVR = 15
-        self.strategyManager = strangleStrat.StrangleStrat(optCallDelta, maxCallDelta, optPutDelta, maxPutDelta,
-                                                          startTime, buyOrSell, underlying, orderQuantity,
-                                                          daysBeforeClose, optimalDTE=optimalDTE, minimumDTE=minimumDTE,
-                                                          minDaysToEarnings=minDaysToEarnings, minCredit=minCredit,
-                                                          maxBuyingPower=maxBuyingPower,
-                                                          profitTargetPercent=profitTargetPercent,
-                                                          maxBidAsk=maxBidAsk,
-                                                          minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
+        self.strategyManager = strangleStrat.StrangleStrat(self.eventQueue, optCallDelta, maxCallDelta, optPutDelta,
+                                                           maxPutDelta, startTime, buyOrSell, underlying,
+                                                           orderQuantity, daysBeforeClose, optimalDTE=optimalDTE,
+                                                           minimumDTE=minimumDTE, minDaysToEarnings=minDaysToEarnings,
+                                                           minCredit=minCredit, maxBuyingPower=maxBuyingPower,
+                                                           profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
+                                                           minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
         #self.__portfolio = portfolio()
         #self.__orderExecution = orderExecution()
         #self.__riskManagement = riskManagement()
