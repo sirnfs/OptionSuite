@@ -2,7 +2,8 @@ import unittest
 import strangleStrat
 from datetime import datetime
 import pytz
-from pytz import timezone
+import Queue as queue
+from dataHandler import csvData
 
 class TestStrangleStrategy(unittest.TestCase):
     # Used to set up the unittest class
@@ -40,11 +41,13 @@ class TestStrangleStrategy(unittest.TestCase):
            minIVR:  minimum implied volatility rank needed to put on strategy
         """
 
+        self.eventQueue = queue.Queue()
+
         # Create strangle strategy object
-        optCallDelta = 16  # integers or floats?
-        maxCallDelta = 30
-        optPutDelta = 16
-        maxPutDelta = 30
+        optCallDelta = 0.16  # integers or floats?
+        maxCallDelta = 0.30
+        optPutDelta = -0.16
+        maxPutDelta = -0.30
         startTime = datetime.now(pytz.utc) #datetime.now(timezone('US/Eastern'))
         buyOrSell = 1  # 0 = buy, 1 = sell (currently only support selling)
         underlying = 'AAPL'
@@ -60,27 +63,52 @@ class TestStrangleStrategy(unittest.TestCase):
         minDaysToEarnings = None #25
         minDaysSinceEarnings = None #3
         minIVR = None #15
-        self.curStrategy = strangleStrat.StrangleStrat(optCallDelta, maxCallDelta, optPutDelta, maxPutDelta,
-                                                  startTime, buyOrSell, underlying, orderQuantity,
-                                                  daysBeforeClose, expCycle=expCycle, optimalDTE=optimalDTE,
-                                                  minimumDTE=minimumDTE, minDaysToEarnings=minDaysToEarnings,
-                                                  minCredit=minCredit, maxBuyingPower=maxBuyingPower,
-                                                  profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
-                                                  minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
+        self.curStrategy = strangleStrat.StrangleStrat(self.eventQueue, optCallDelta, maxCallDelta, optPutDelta,
+                                                       maxPutDelta,startTime, buyOrSell, underlying, orderQuantity,
+                                                       daysBeforeClose, expCycle=expCycle, optimalDTE=optimalDTE,
+                                                       minimumDTE=minimumDTE, minDaysToEarnings=minDaysToEarnings,
+                                                       minCredit=minCredit, maxBuyingPower=maxBuyingPower,
+                                                       profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
+                                                       minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
+
+        # Create CsvData class object
+        self.dataProvider = 'iVolatility'
+        self.directory = '/Users/msantoro/PycharmProjects/Backtester/sampleData'
+        self.filename = 'aapl_sample_ivolatility.csv'
+        self.csvObj = csvData.CsvData(self.directory, self.filename, self.dataProvider, self.eventQueue)
 
     def testStrangleStratCreation(self):
 
-        self.assertEqual(self.curStrategy.getOptimalCallDelta(), 16)
+        self.assertEqual(self.curStrategy.getOptimalCallDelta(), 0.16)
 
     def testHasMinimumDTE_Method(self):
         local = pytz.timezone('US/Eastern')
-        dateTime = datetime.strptime("08/30/17", "%m/%d/%y")
-        dateTime = local.localize(dateTime, is_dst=None)
-        dateTime = dateTime.astimezone(pytz.utc)
+        expDateTime = datetime.strptime("08/30/17", "%m/%d/%y")
+        expDateTime = local.localize(expDateTime, is_dst=None)
+        expDateTime = expDateTime.astimezone(pytz.utc)
 
-        hasMin = self.curStrategy.hasMinimumDTE(dateTime)
+        curDateTime = datetime.strptime("08/01/17", "%m/%d/%y")
+        curDateTime = local.localize(curDateTime, is_dst=None)
+        curDateTime = curDateTime.astimezone(pytz.utc)
+
+        hasMin = self.curStrategy.hasMinimumDTE(curDateTime, expDateTime)
 
         self.assertEqual(hasMin, True)
+
+    def testStrangleCriteriaMet(self):
+
+        #Get option chain and see if we trigger any signal events
+        while self.csvObj.getOptionChain():
+            # Get event from the queue
+            event = self.eventQueue.get()
+            self.curStrategy.checkForSignal(event)
+
+        #Check the signal events -- we should have two signal events
+        #event = self.eventQueue.get()
+        #eventData = event.getData()
+        #self.assertEqual(eventData)
+
+
 
 if __name__ == '__main__':
     unittest.main()

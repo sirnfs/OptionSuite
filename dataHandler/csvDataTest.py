@@ -10,7 +10,7 @@ class TestCSVHandler(unittest.TestCase):
     def setUp(self):
         # Create CsvData class object
         self.dataProvider = 'iVolatility'
-        self.directory = './sampleData'
+        self.directory = '/Users/msantoro/PycharmProjects/Backtester/sampleData'
         self.filename = 'aapl_sample_ivolatility.csv'
         self.eventQueue = queue.Queue()
         self.csvObj = csvData.CsvData(self.directory, self.filename, self.dataProvider, self.eventQueue)
@@ -64,6 +64,8 @@ class TestCSVHandler(unittest.TestCase):
         dateTime = local.localize(dateTime, is_dst=None)
         dateTime = dateTime.astimezone(pytz.utc)
         self.assertEqual(curDateTime, dateTime)
+
+        #Close file
 
 if __name__ == '__main__':
     unittest.main()
