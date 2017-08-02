@@ -13,7 +13,8 @@ class TestCSVHandler(unittest.TestCase):
         self.directory = '/Users/msantoro/PycharmProjects/Backtester/sampleData'
         self.filename = 'aapl_sample_ivolatility.csv'
         self.eventQueue = queue.Queue()
-        self.csvObj = csvData.CsvData(self.directory, self.filename, self.dataProvider, self.eventQueue)
+        self.chunkSize = 1822
+        self.csvObj = csvData.CsvData(self.directory, self.filename, self.dataProvider, self.eventQueue, self.chunkSize)
 
     def testGetOptionChain(self):
         #Get option chain for the first time/date from CSV
@@ -65,7 +66,11 @@ class TestCSVHandler(unittest.TestCase):
         dateTime = dateTime.astimezone(pytz.utc)
         self.assertEqual(curDateTime, dateTime)
 
-        #Close file
+        #Try to get one more option chain -- this should result in an error
+        returnVal = self.csvObj.getOptionChain()
+
+        #Check return value
+        self.assertEqual(returnVal, False)
 
 if __name__ == '__main__':
     unittest.main()

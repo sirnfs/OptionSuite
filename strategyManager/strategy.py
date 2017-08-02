@@ -30,7 +30,7 @@ class Strategy(object):
      def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, expCycle=None,
                   optimalDTE=None, minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None,
                   maxBuyingPower=None, profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None,
-                  minDaysSinceEarnings=None, minIVR=None):
+                  maxMidDev=None, minDaysSinceEarnings=None, minIVR=None):
 
          """Inits Strategy class with constructor data.  We check to make sure that
          the user doesn't try to instantiate the Strategy class"""
@@ -55,6 +55,7 @@ class Strategy(object):
          self.__profitTargetPercent = profitTargetPercent
          self.__avoidAssignment = avoidAssignment
          self.__maxBidAsk = maxBidAsk
+         self.__maxMidDev = maxMidDev
          self.__minDaysSinceEarnings = minDaysSinceEarnings
          self.__minIVR = minIVR
 
@@ -105,6 +106,9 @@ class Strategy(object):
 
      def getMaxBidAsk(self):
          return self.__maxBidAsk
+
+     def getMaxMidDev(self):
+         return self.__maxMidDev
 
      def getMinDaysSinceEarnings(self):
          return self.__minDaysSinceEarnings

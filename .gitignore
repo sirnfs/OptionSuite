@@ -6,6 +6,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# CSV files used for backtesting
+*.csv
+
 # C extensions
 *.so
 
