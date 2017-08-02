@@ -73,9 +73,10 @@ class TestStrangleStrategy(unittest.TestCase):
 
         # Create CsvData class object
         self.dataProvider = 'iVolatility'
-        self.directory = '/Users/msantoro/PycharmProjects/Backtester/sampleData'
-        self.filename = 'aapl_sample_ivolatility.csv'
-        self.csvObj = csvData.CsvData(self.directory, self.filename, self.dataProvider, self.eventQueue)
+        self.directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017'
+        self.filename = 'RawIV.csv'
+        self.chunkSize = 10000
+        self.csvObj = csvData.CsvData(self.directory, self.filename, self.dataProvider, self.eventQueue, self.chunkSize)
 
     def testStrangleStratCreation(self):
 
@@ -96,18 +97,11 @@ class TestStrangleStrategy(unittest.TestCase):
         self.assertEqual(hasMin, True)
 
     def testStrangleCriteriaMet(self):
-
         #Get option chain and see if we trigger any signal events
         while self.csvObj.getOptionChain():
             # Get event from the queue
             event = self.eventQueue.get()
             self.curStrategy.checkForSignal(event)
-
-        #Check the signal events -- we should have two signal events
-        #event = self.eventQueue.get()
-        #eventData = event.getData()
-        #self.assertEqual(eventData)
-
 
 
 if __name__ == '__main__':

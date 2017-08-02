@@ -1,7 +1,7 @@
 import strategy
 from events import signalEvent
 from datetime import datetime, timedelta
-import pytz
+from optionPrimitives import strangle
 
 class StrangleStrat(strategy.Strategy):
     """This class sets up the basics for a SPECIFIC strategy that will be used;
@@ -43,8 +43,8 @@ class StrangleStrat(strategy.Strategy):
     def __init__(self, eventQueue, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
                  underlying, orderQuantity, daysBeforeClose, expCycle=None, optimalDTE=None,
                  minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
-                 profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, minDaysSinceEarnings=None,
-                 minIVR=None):
+                 profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, maxMidDev=None,
+                 minDaysSinceEarnings=None, minIVR=None):
 
         #For arguments that are not supported or don't have implementations, we return an exception to prevent confusion
         if not roc == None:
@@ -72,7 +72,7 @@ class StrangleStrat(strategy.Strategy):
         strategy.Strategy.__init__(self, startTime, self.__strategy, buyOrSell, underlying, orderQuantity,
                                    daysBeforeClose, expCycle, optimalDTE, minimumDTE, roc, minDaysToEarnings,
                                    minCredit, maxBuyingPower, profitTargetPercent, avoidAssignment,
-                                   maxBidAsk, minDaysSinceEarnings, minIVR)
+                                   maxBidAsk, maxMidDev, minDaysSinceEarnings, minIVR)
 
     def getOptimalCallDelta(self):
         return self.__optCallDelta
@@ -121,15 +121,17 @@ class StrangleStrat(strategy.Strategy):
         rule for choosing.
         """
 
-        #Get the data from the tick event
-        eventData = event.getData()
-
-        #These temporary variables will be used to keep track of the optimal options as we go through the options
-        #chain
+        # These variables will be used to keep track of the optimal options as we go through the options
+        # chain
         optimalCallOpt = []
         optimalCallDelta = None
+        optimalCallDTE = None
         optimalPutOpt = []
         optimalPutDelta = None
+        optimalPutDTE = None
+
+        #Get the data from the tick event
+        eventData = event.getData()
 
         #Process one option at a time from the option chain (now objects of option class)
         for option in eventData:
@@ -154,13 +156,34 @@ class StrangleStrat(strategy.Strategy):
                 if optimalCallDelta == None:
                     optimalCallOpt = option
                     optimalCallDelta = option.getDelta()
+                    optimalCallDTE = self.getNumDays(option.getDateTime(), option.getDTE())
                     #print('Call found at delta {}'.format(option.getDelta()))
                 else:
                     curDelta = option.getDelta()
                     optCurDelta = self.getOptimalCallDelta()
-                    if abs(curDelta - optCurDelta) <  abs(optimalCallDelta - optCurDelta):
+                    curDTE = self.getNumDays(option.getDateTime(), option.getDTE())
+                    optCurDTE = self.getOptimalDTE()
+
+                    #Do we have a new expiration that's closer to the optCurDTE?
+                    if abs(curDTE - optCurDTE) < abs(optimalCallDTE - optCurDTE):
+                        optimalCallOpt = option
+                        optimalCallDelta = curDelta
+                        optimalCallDTE = curDTE
+
+                    elif abs(curDelta - optCurDelta) < abs(optimalCallDelta - optCurDelta) \
+                            and abs(curDTE - optCurDTE) == abs(optimalCallDTE - optCurDTE):
+
+                        # If we have two possible expirations that will work, e.g., if
+                        # there are 31 days to the current month's expiration, and 59 days
+                        # to the next month's expiration, then we choose the closer expiration
+                        if (curDTE - optCurDTE) == -(optimalCallDTE - optCurDTE) and abs(curDTE - optCurDTE) > 0:
+                            continue
+                            # Since option expirations come in sequential order, this will force the earlier expiration
+                            # to be chosen
+
                         optimalCallOpt = option
                         optimalCallDelta = option.getDelta()
+                        optimalCallDTE = self.getNumDays(option.getDateTime(), option.getDTE())
 
             elif option.getOptionType() == 'PUT':
                 if self.getExpCycle() == 'm': #monthly options specified
@@ -181,26 +204,52 @@ class StrangleStrat(strategy.Strategy):
                 if optimalPutDelta == None:
                     optimalPutOpt = option
                     optimalPutDelta = option.getDelta()
+                    optimalPutDTE = self.getNumDays(option.getDateTime(), option.getDTE())
                     #print('Put found at delta {}'.format(option.getDelta()))
                 else:
                     curDelta = option.getDelta()
                     optCurDelta = self.getOptimalPutDelta()
-                    if abs(curDelta - optCurDelta) <  abs(optimalPutDelta - optCurDelta):
+                    curDTE = self.getNumDays(option.getDateTime(), option.getDTE())
+                    optCurDTE = self.getOptimalDTE()
+
+                    # Do we have a new expiration that's closer to the optCurDTE?
+                    if abs(curDTE - optCurDTE) < abs(optimalPutDTE - optCurDTE):
+                        optimalPutOpt = option
+                        optimalPutDelta = curDelta
+                        optimalPutDTE = curDTE
+
+                    elif abs(curDelta - optCurDelta) <  abs(optimalPutDelta - optCurDelta) \
+                        and abs(curDTE - optCurDTE) == abs(optimalPutDTE - optCurDTE):
+
+                        #If we have two possible expirations that will work, e.g., if
+                        #there are 31 days to the current month's expiration, and 59 days
+                        #to the next month's expiration, then we choose the closer expiration
+                        if (curDTE - optCurDTE) == -(optimalPutDTE - optCurDTE) and abs(curDTE - optCurDTE) > 0:
+                            continue
+                            #Since option expirations come in sequential order, this will force the earlier expiration
+                            #to be chosen
+
                         optimalPutOpt = option
                         optimalPutDelta = option.getDelta()
+                        optimalPutDTE = self.getNumDays(option.getDateTime(), option.getDTE())
 
         #Must check that a CALL and PUT were found which meet criteria and are in the same expiration
         if optimalPutOpt and optimalCallOpt and optimalPutOpt.getDTE() == optimalCallOpt.getDTE():
-            #Temporarily add the optimal put and optimal call to an array for testing; we will create
-            #a strangle option primitive in the actual system; the strangle primitive will have several of the
-            #arguments from the init of StrangleStrat class
-            tempData = [optimalPutOpt, optimalCallOpt]
-            #Create signal event to put on strangle strategy and add to queue
-            event = signalEvent.SignalEvent()
-            event.createEvent(tempData)
-            #self.__eventQueue.put(event)
 
-        #return eventData
+            print('Date / Time {}'.format(option.getDateTime()))
+            print('Put Delta {}, Put DTE {}'.format(optimalPutOpt.getDelta(), optimalPutOpt.getDTE()))
+            print('Call Delta {}, Call DTE {}'.format(optimalCallOpt.getDelta(), optimalCallOpt.getDTE()))
+            #We create a strangle option primitive; the strangle primitive will have several of the
+            #arguments from the init of StrangleStrat class
+            #strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt,
+            #                                self.getDaysBeforeClose(), self.getROC(), self.getMaxBuyingPower(),
+            #                                self.getProfitTargetPercent(), self.getAvoidAssignmentFlag(),
+            #                                self.getMaxBidAsk(), self.getMaxMidDev())
+
+            #Create signal event to put on strangle strategy and add to queue
+            #event = signalEvent.SignalEvent()
+            #event.createEvent(strangleObj)
+            #self.__eventQueue.put(event)
 
     def isMonthlyExp(self, dateTime):
         '''
@@ -213,7 +262,7 @@ class StrangleStrat(strategy.Strategy):
         '''
 
         #Subtract one from expiration date to get the Friday before expiration (independent of holidays)
-        adjustDate = dateTime - timedelta(days=1)
+        adjustDate = dateTime# - timedelta(days=1)
 
         return (adjustDate.weekday() == 4 and 14 < adjustDate.day < 22)
 
@@ -227,3 +276,12 @@ class StrangleStrat(strategy.Strategy):
         :return: true if difference between current date and dateTime is >= self.minimumDTE; else false
         '''
         return (expDateTime - curDateTime).days >= self.getMinimumDTE()
+
+    def getNumDays(self, curDateTime, expDateTime):
+        '''
+        Determine if the number of days between the curDateTime and the expDateTime
+        :param curDateTime: current date in mm/dd/yy format
+        :param expDateTime: option expiration date in mm/dd/yy format
+        :return: number of days between curDateTime and expDateTime
+        '''
+        return (expDateTime - curDateTime).days

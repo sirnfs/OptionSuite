@@ -1,4 +1,3 @@
-from base import put
 from optionPrimitive import OptionPrimitive
 
 class Strangle(OptionPrimitive):
@@ -18,19 +17,19 @@ class Strangle(OptionPrimitive):
            maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
            maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
     """
-    def __init__(self, underlying, delta,
-                 DTE, orderQuantity, buyOrSell):
+    def __init__(self, orderQuantity, callOpt, putOpt, daysBeforeClosing, roc=None, maxBuyingPower=None,
+                 profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, maxMidDev=None):
 
         self.__numContracts = orderQuantity
-
-        self.__primitiveElems = []
-
-        #TODO:  need to specify delta for put or call and not strike price
-
-        #Create multiple objects of class Put and class Call
-        #for i in range(self.__numContracts):
-        #     self.__primitiveElems.append(put.Put(underlying, strikePrice,
-        #                                  longOrShort, delta, DTE))
+        self.__putOpt = putOpt
+        self.__callOpt = callOpt
+        self.__daysBeforeClosing = daysBeforeClosing
+        self.__roc = roc
+        self.__maxBuyingPower = maxBuyingPower
+        self.__profitTargetPercent = profitTargetPercent
+        self.__avoidAssignment = avoidAssignment
+        self.__maxBidAsk = maxBidAsk
+        self.__maxMidDev = maxMidDev
 
     def addPrimitive(self):
         pass
@@ -40,13 +39,9 @@ class Strangle(OptionPrimitive):
 
     def getNumContracts(self):
         """This function returns the number of contracts for the overall
-        primitive, and it should not confused with the number of option 
-        contracts; e.g., number of strangles.
-        For this particular class, we are only dealing with puts, so it
-        will return the number of put contracts"""
+        primitive.
+        For this particular class, we are dealing with strangles, so it
+        will return the total number of strangles"""
         return self.__numContracts
 
-    def getPrimitiveElements(self):
-        """This function returns the array which contains all of the
-        options making up a primitive"""
-        return self.__primitiveElems
+

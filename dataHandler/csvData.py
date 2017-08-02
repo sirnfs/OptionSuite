@@ -2,7 +2,6 @@ import pandas as pd
 import datetime
 import pytz
 from dataHandler import DataHandler
-from base import stock
 from base import call
 from base import put
 from events import tickEvent
@@ -13,7 +12,7 @@ class CsvData(DataHandler):
     The purpose of this class is to get handle CSV data operations
     """
 
-    def __init__(self, csvDir, filename, dataProvider, eventQueue):
+    def __init__(self, csvDir, filename, dataProvider, eventQueue, chunkSize):
         """
         csvDir: input CSV directory of files used in backtesting
         filename:  filename of CSV to process
@@ -26,8 +25,10 @@ class CsvData(DataHandler):
         """
         self.__csvDir = csvDir
         self.__curRow = 0
+        self.__chunkSize = chunkSize
         self.__curTimeDate = None
         self.__dataAvailable = False
+        self.__dataReader = None
         self.__dataFrame = None
         self.__dataProvider = dataProvider
         self.__eventQueue = eventQueue
@@ -42,25 +43,25 @@ class CsvData(DataHandler):
         
         Args:
         filename:  input CSV file which contains historical data
-
-        Returns:
-        pandas dataframe of loaded CSV file
         """
 
         try:
-            self.__dataFrame = pd.read_csv(self.__csvDir + '/' + filename)
+            self.__dataReader = pd.read_csv(self.__csvDir + '/' + filename, iterator=True)
+            #Get a chunk and store it in the dataFrame
+            self.__dataFrame = self.__dataReader.get_chunk(self.__chunkSize)
         except IOError:
             print("Unable to open data source")
             raise
 
         self.__dataAvailable = True
 
-        if len(self.__dataFrame.columns) != 24:
-            print("CSV did not have right number of columns")
-            raise
-
-        #Close file
-
+        #TODO:  is there a function to get the table_width?
+        if self.__dataProvider == "iVolatility":
+            try:
+                self.__dataReader._engine._reader.table_width == 25
+            except:
+                print("CSV did not have right number of columns")
+                raise
 
     def getOptionChain(self):
         """
@@ -96,11 +97,17 @@ class CsvData(DataHandler):
             try:
                 optionChain.append(self.__dataFrame.iloc[self.__curRow])
                 self.__curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
-            except:
                 self.__curRow += 1
-                return False
-
-            self.__curRow += 1
+            except:
+                #Could not get the current row if we end up here; try chunking to get more data
+                try:
+                    self.__dataFrame = self.__dataReader.get_chunk(self.__chunkSize)
+                    self.__curRow = 0
+                    optionChain.append(self.__dataFrame.iloc[self.__curRow])
+                    self.__curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
+                    self.__curRow += 1
+                except:
+                    return False
 
             #TODO:  replace this while loop with something more efficient --
             #for example, can select all dates from dataframe and then iterate
@@ -112,7 +119,13 @@ class CsvData(DataHandler):
                 try:
                     curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
                 except:
-                    break
+                    #Try chunking to get more data  since we couldn't get current row
+                    try:
+                        self.__dataFrame = self.__dataReader.get_chunk(self.__chunkSize)
+                        self.__curRow = 0
+                        curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
+                    except:
+                        break
 
                 if curTimeDate == self.__curTimeDate:
                     optionChain.append(self.__dataFrame.iloc[self.__curRow])
@@ -122,7 +135,10 @@ class CsvData(DataHandler):
 
             #Convert option chain to base types (calls, puts)
             for row in optionChain:
-                optionChainObjs.append(self.createBaseType(row))
+                currentObj = self.createBaseType(row)
+                #Make sure currentObj is not None
+                if currentObj:
+                    optionChainObjs.append(currentObj)
 
             # Create event and add to queue
             event = tickEvent.TickEvent()
@@ -201,16 +217,16 @@ class CsvData(DataHandler):
             try:
                 local = pytz.timezone('US/Eastern')
                 #Convert time zone of data 'US/Eastern' to UTC time
-                DTE = datetime.datetime.strptime(inputData['expiration_date'], "%m/%d/%y")
+                DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%Y")
                 DTE = local.localize(DTE, is_dst=None)
                 DTE = DTE.astimezone(pytz.utc)
-                curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%y")
+                curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%Y")
                 curDateTime = local.localize(curDateTime, is_dst=None)
                 curDateTime = curDateTime.astimezone(pytz.utc)
             except:
                 return None
 
-            call_put = inputData['call_put']
+            call_put = inputData['call/put']
 
             if call_put == 'C':
                 #def __init__(self, underlyingTicker, strikePrice, delta, DTE, longOrShort=None, underlyingPrice=None,
