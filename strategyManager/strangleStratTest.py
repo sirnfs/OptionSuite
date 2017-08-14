@@ -96,13 +96,33 @@ class TestStrangleStrategy(unittest.TestCase):
 
         self.assertEqual(hasMin, True)
 
+    # def testFileWrite(self):
+    #     f = open('fileWriteTest.txt', 'w')
+    #     f.write("Date / Time")
+    #     f.write("\n")
+    #     f.write("Put Delta, Put DTE")
+    #     f.write("\n")
+    #     f.write("Call Delta, Call DTE")
+    #     f.write("\n")
+    #     f.close()
+    #     pass
+
     def testStrangleCriteriaMet(self):
-        #Get option chain and see if we trigger any signal events
+        # Get option chain and see if we trigger any signal events
         while self.csvObj.getOptionChain():
             # Get event from the queue
             event = self.eventQueue.get()
             self.curStrategy.checkForSignal(event)
+            # Get the signal event
+            # Check if queue is empty
+            if self.eventQueue.empty():
+                print("Empty queue; problem?")
+            else:
+              event = self.eventQueue.get()
+              # Do nothing with the event for now
 
+        #self.curStrategy._f.close()
+        pass
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,5 @@
 import strategy
 from events import signalEvent
-from datetime import datetime, timedelta
 from optionPrimitives import strangle
 
 class StrangleStrat(strategy.Strategy):
@@ -13,7 +12,6 @@ class StrangleStrat(strategy.Strategy):
            maxCallDelta:  max delta for call, usually around 30 delta
            optPutDelta:  optimal delta for put, usually around 16 delta
            maxPutDelta:  max delta for put, usually around 30 delta
-
 
        General strategy attributes:
             startDateTime:  date/time to start the live trading or backtest
@@ -73,6 +71,9 @@ class StrangleStrat(strategy.Strategy):
                                    daysBeforeClose, expCycle, optimalDTE, minimumDTE, roc, minDaysToEarnings,
                                    minCredit, maxBuyingPower, profitTargetPercent, avoidAssignment,
                                    maxBidAsk, maxMidDev, minDaysSinceEarnings, minIVR)
+
+        # For debugging open file
+        #self._f = open('stranglesCreated', 'w')
 
     def getOptimalCallDelta(self):
         return self.__optCallDelta
@@ -196,7 +197,7 @@ class StrangleStrat(strategy.Strategy):
                     optimalPutDTE = currentDTE
                     optimalPutOpt = option
                 # Option has same DTE as optimalPutOpt; check deltas to find closest to studyPutDelta
-                elif (currentDTE - studyDTE) == (optimalPutDTE - studyDTE):
+                elif currentDTE == optimalPutDTE:
                     curDelta = option.getDelta()
                     optimalDelta = optimalPutOpt.getDelta()
                     if abs(curDelta - optimalDelta) < abs(studyPutDelta - optimalDelta):
@@ -204,20 +205,24 @@ class StrangleStrat(strategy.Strategy):
 
         # Must check that a CALL and PUT were found which meet criteria and are in the same expiration
         if optimalPutOpt and optimalCallOpt and optimalPutOpt.getDTE() == optimalCallOpt.getDTE():
-            print('Date / Time {}'.format(option.getDateTime()))
-            print('Put Delta {}, Put DTE {}'.format(optimalPutOpt.getDelta(), optimalPutOpt.getDTE()))
-            print('Call Delta {}, Call DTE {}'.format(optimalCallOpt.getDelta(), optimalCallOpt.getDTE()))
+            # self._f.write("Date / Time {}".format(option.getDateTime()))
+            # self._f.write("\n")
+            # self._f.write("Put Delta {}, Put DTE {}".format(optimalPutOpt.getDelta(), optimalPutOpt.getDTE()))
+            # self._f.write("\n")
+            # self._f.write("Call Delta {}, Call DTE {}".format(optimalCallOpt.getDelta(), optimalCallOpt.getDTE()))
+            # self._f.write("\n")
+            # self._f.flush()
             # We create a strangle option primitive; the strangle primitive will have several of the
             # arguments from the init of StrangleStrat class
-            # strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt,
-            #                                self.getDaysBeforeClose(), self.getROC(), self.getMaxBuyingPower(),
-            #                                self.getProfitTargetPercent(), self.getAvoidAssignmentFlag(),
-            #                                self.getMaxBidAsk(), self.getMaxMidDev())
+            strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt,
+                                            self.getDaysBeforeClose(), self.getROC(), self.getMaxBuyingPower(),
+                                            self.getProfitTargetPercent(), self.getAvoidAssignmentFlag(),
+                                            self.getMaxBidAsk(), self.getMaxMidDev())
 
             # Create signal event to put on strangle strategy and add to queue
-            # event = signalEvent.SignalEvent()
-            # event.createEvent(strangleObj)
-            # self.__eventQueue.put(event)
+            event = signalEvent.SignalEvent()
+            event.createEvent(strangleObj)
+            self.__eventQueue.put(event)
 
     def isMonthlyExp(self, dateTime):
         '''
@@ -229,12 +234,7 @@ class StrangleStrat(strategy.Strategy):
         :return: true if it's a monthly option; false otherwise
         '''
 
-        #Subtract one from expiration date to get the Friday before expiration (independent of holidays)
-        adjustDate = dateTime# - timedelta(days=1)
-
-        return (adjustDate.weekday() == 4 and 14 < adjustDate.day < 22)
-
-        #return ((dateTime.weekday() == 4 or dateTime.weekday() == 3) and 14 < dateTime.day < 22)
+        return (dateTime.weekday() == 4 and 14 < dateTime.day < 22)
 
     def hasMinimumDTE(self, curDateTime, expDateTime):
         '''
