@@ -8,6 +8,7 @@ class Stock(object):
      -Buy/Sell (long/short) -- binary value
      -Bid price
      -Ask price
+     -Trade price
      -Open interest
      -Volume
      -Quote Date / Time
@@ -22,6 +23,7 @@ class Stock(object):
        longOrShort:  indicates if we are long or short the stock; 'Long' = long and 'Short' = short
        bidPrice:  current bid price of option
        askPrice:  current asking price of option
+       tradePrice:  price of stock when order was executed
        openInterest:  number of open option contracts
        volume:  number of contracts traded
        dateTime:  data / time of quote recieved; would also be data / time bought / sold
@@ -33,7 +35,7 @@ class Stock(object):
      """
 
     def __init__(self, underlyingTicker, longOrShort, underlyingPrice=None, bidPrice=None,
-                 askPrice=None, openInterest=None, volume=None, dateTime=None, exchangeCode=None,
+                 askPrice=None, tradePrice=None, openInterest=None, volume=None, dateTime=None, exchangeCode=None,
                  openCost=None, closeCost=None, tradeID=None):
         """Inits Stock class with constructor data."""
 
@@ -42,6 +44,7 @@ class Stock(object):
         self.__longOrShort = longOrShort
         self.__bidPrice = bidPrice
         self.__askPrice = askPrice
+        self.__tradePrice = tradePrice
         self.__openInterest = openInterest
         self.__volume = volume
         self.__dateTime = dateTime
@@ -64,6 +67,9 @@ class Stock(object):
 
     def getAskPrice(self):
         return self.__askPrice
+
+    def getTradePrice(self):
+        return self.__tradePrice
 
     def getOpenInterest(self):
         return self.__openInterest

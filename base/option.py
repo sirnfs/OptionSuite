@@ -5,6 +5,7 @@ class Option(object):
 
      An option has the following internals
      -Underlying price
+     -Underlying trade price
      -Underlying ticker symbol
      -Option Symbol
      -Alias (old symbol for option if it exists)
@@ -12,6 +13,7 @@ class Option(object):
      -Buy/Sell (long/short) -- binary value
      -Bid price
      -Ask price
+     -Trade price (price of option when trade was put on)
      -Open interest
      -Volume
      -Quote Date / Time
@@ -31,6 +33,7 @@ class Option(object):
 
      Attributes:
        underlyingPrice:  price of the underlying / stock which has option derivatives in dollars
+       underlyingTradePrice:  price of underlying at the time the trade was placed
        underlyingTicker:  ticker symbol (e.g., SPY) of underlying
        optionSymbol:  code different than the underlying ticker used to denote option
        optionAlias:  old code used to denote option if it changed; usually blank
@@ -39,6 +42,7 @@ class Option(object):
        longOrShort:  indicates if we are long or short the option; 'Long' = long and 'Short' = short
        bidPrice:  current bid price of option
        askPrice:  current asking price of option
+       tradePrice:  price of option when trade was executed / put on.
        openInterest:  number of open option contracts
        volume:  number of contracts traded
        dateTime:  data / time of quote recieved; would also be data / time bought / sold
@@ -59,8 +63,8 @@ class Option(object):
      """
 
     def __init__(self, underlyingTicker, strikePrice, optionType, delta, DTE, longOrShort=None,
-                 underlyingPrice=None, optionSymbol=None, optionAlias=None, bidPrice=None,
-                 askPrice=None, openInterest=None, volume=None, dateTime=None, theta=None,
+                 underlyingPrice=None, underlyingTradePrice=None, optionSymbol=None, optionAlias=None, bidPrice=None,
+                 askPrice=None, tradePrice=None, openInterest=None, volume=None, dateTime=None, theta=None,
                  gamma=None, rho=None, vega=None, impliedVol=None, exchangeCode=None,
                  exercisePrice=None, assignPrice=None, openCost=None, closeCost=None,
                  tradeID=None):
@@ -72,6 +76,7 @@ class Option(object):
                                        "classes"
 
         self.__underlyingPrice = underlyingPrice
+        self.__underlyingTradePrice = underlyingTradePrice
         self.__underlyingTicker = underlyingTicker
         self.__optionSymbol = optionSymbol
         self.__optionAlias = optionAlias
@@ -80,6 +85,7 @@ class Option(object):
         self.__longOrShort = longOrShort
         self.__bidPrice = bidPrice
         self.__askPrice = askPrice
+        self.__tradePrice = tradePrice
         self.__openInterest = openInterest
         self.__volume = volume
         self.__dateTime = dateTime
@@ -99,6 +105,9 @@ class Option(object):
 
     def getUnderlyingPrice(self):
         return self.__underlyingPrice
+
+    def getUnderlyingTradePrice(self):
+        return self.__underlyingTradePrice
 
     def getUnderlyingTicker(self):
         return self.__underlyingTicker
@@ -123,6 +132,9 @@ class Option(object):
 
     def getAskPrice(self):
         return self.__askPrice
+
+    def getTradePrice(self):
+        return self.__tradePrice
 
     def getOpenInterest(self):
         return self.__openInterest

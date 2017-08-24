@@ -199,8 +199,10 @@ class CsvData(DataHandler):
             try:
                 strikePrice = float(inputData['strike'])
                 underlyingPrice = float(inputData['stock_price_close'])
+                underlyingTradePrice = underlyingPrice
                 askPrice = float(inputData['ask'])
                 bidPrice = float(inputData['bid'])
+                tradePrice = (askPrice + bidPrice) / 2
                 impliedVol = float(inputData['iv'])
                 volume = float(inputData['volume'])
                 openInterest = int(inputData['open_interest'])
@@ -229,18 +231,14 @@ class CsvData(DataHandler):
             call_put = inputData['call/put']
 
             if call_put == 'C':
-                #def __init__(self, underlyingTicker, strikePrice, delta, DTE, longOrShort=None, underlyingPrice=None,
-                # optionSymbol=None, optionAlias=None, bidPrice=None, askPrice=None, openInterest=None,
-                # volume=None, dateTime=None, theta=None, gamma=None, rho=None, vega=None, impliedVol=None,
-                # exchangeCode=None, exercisePrice=None, assignPrice=None, openCost=None, closeCost=None, tradeID=None)
-                return call.Call(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
-                                 None, bidPrice, askPrice, openInterest, volume, curDateTime, theta, gamma, rho, vega,
-                                 impliedVol, exchange)
+                return call.Call(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, underlyingTradePrice,
+                                 optionSymbol, None, bidPrice, askPrice, tradePrice, openInterest, volume, curDateTime,
+                                 theta, gamma, rho, vega, impliedVol, exchange)
 
             elif call_put == 'P':
-                return put.Put(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, optionSymbol,
-                               None, bidPrice, askPrice, openInterest, volume, curDateTime, theta, gamma, rho, vega,
-                               impliedVol, exchange)
+                return put.Put(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, underlyingTradePrice,
+                               optionSymbol, None, bidPrice, askPrice, tradePrice, openInterest, volume, curDateTime,
+                               theta, gamma, rho, vega, impliedVol, exchange)
 
             else:
                 return None
