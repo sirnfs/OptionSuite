@@ -7,7 +7,7 @@ class Portfolio(object):
        Portfolio inputs:
        startingCapital -- how much capital we have when starting
        maxCapitalToUse -- max percent of portfolio to use (integer between 0 to 100)
-       maxCapitalToUsePerTrade -- max percent of portfolio to use on one trade (same underlying)
+       maxCapitalToUsePerTrade -- max percent of portfolio to use on one trade (same underlying), 0 to 100
 
        Portfolio intrinsics:
        netLiq:  net liquidity of total portfolio (ideally includes commissions, fees, etc.)
@@ -24,9 +24,38 @@ class Portfolio(object):
 
     def __init__(self, startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade):
 
+        # Portfolio risk management
         self.__startingCapital = startingCapital
         self.__maxCapitalToUse = maxCapitalToUse
         self.__maxCapitalToUsePerTrade = maxCapitalToUsePerTrade
+
+        # Overall portfolio intrinsics
+        self.__netLiq = None
+        self.__PLopen = None
+        self.__PLday = None
+        self.__PLopenPercent = None
+        self.__PLdayPercent = None
+        self.__totDelta = None
+        self.__totVega = None
+        self.__totTheta = None
+        self.__totGamma = None
+
+        # Array to hold option primitives
+        self.positions = None
+
+    def onSignal(self, event):
+        """Handle a new signal event; indicates that a new position should be added to the portfolio
+        if portfolio risk conditions are satisfied
+
+        :param event: event to be handled by portfolio; signal event in this case
+
+        """
+
+        pass
+
+
+
+
 
 
 

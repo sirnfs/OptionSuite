@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime
 import pytz
+import sys
 from dataHandler import DataHandler
 from base import call
 from base import put
@@ -245,5 +246,5 @@ class CsvData(DataHandler):
 
         else:
             print("Unrecognized CSV data source provider")
-            raise
+            sys.exit(1)
 
