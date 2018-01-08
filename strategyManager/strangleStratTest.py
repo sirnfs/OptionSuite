@@ -57,7 +57,6 @@ class TestStrangleStrategy(unittest.TestCase):
         optimalDTE = 45
         minimumDTE = 25
         minCredit = 0.5
-        maxBuyingPower = None #4000
         profitTargetPercent = 50
         maxBidAsk = 0.05
         minDaysToEarnings = None #25
@@ -67,9 +66,9 @@ class TestStrangleStrategy(unittest.TestCase):
                                                        maxPutDelta,startTime, buyOrSell, underlying, orderQuantity,
                                                        daysBeforeClose, expCycle=expCycle, optimalDTE=optimalDTE,
                                                        minimumDTE=minimumDTE, minDaysToEarnings=minDaysToEarnings,
-                                                       minCredit=minCredit, maxBuyingPower=maxBuyingPower,
-                                                       profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
-                                                       minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
+                                                       minCredit=minCredit, profitTargetPercent=profitTargetPercent,
+                                                       maxBidAsk=maxBidAsk, minDaysSinceEarnings=minDaysSinceEarnings,
+                                                       minIVR=minIVR)
 
         # Create CsvData class object
         self.dataProvider = 'iVolatility'

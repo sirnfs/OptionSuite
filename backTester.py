@@ -1,6 +1,7 @@
 import Queue as queue
 from dataHandler import csvData
 from strategyManager import strangleStrat
+from portfolio import portfolio
 from datetime import datetime
 import pytz
 """
@@ -48,7 +49,13 @@ class BackTestSession(object):
                                                            minCredit=minCredit, maxBuyingPower=maxBuyingPower,
                                                            profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
                                                            minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
-        #self.__portfolio = portfolio()
+
+        startingCapital = 100000
+        maxCapitalToUse = 50 #percent
+        maxCapitalToUsePerTrade = 5 #percent
+        self.portfolio = portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
+
+
         #self.__orderExecution = orderExecution()
         #self.__riskManagement = riskManagement()
 
@@ -72,7 +79,7 @@ def run(session):
                 elif event.type == 'SIGNAL':
                     pass
                     #self.riskManager.checkRisk(event)
-                    #self.portfolio_handler.on_signal(event)
+                    session.portfolio.onSignal(event)
                 elif event.type == 'ORDER':
                     pass
                     #self.execution_handler.execute_order(event)
