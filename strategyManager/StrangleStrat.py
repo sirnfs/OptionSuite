@@ -29,7 +29,6 @@ class StrangleStrat(strategy.Strategy):
             roc:  minimal return on capital for overall trade as a decimal
             minDaysToEarnings:  minimum number of days to put on trade before earnings
             minCredit:  minimum credit to collect on overall trade
-            maxBuyingPower:  maximum buying power to use on overall trade
             profitTargetPercent:  percentage of initial credit to use when closing trade
             avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
             maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
@@ -40,9 +39,8 @@ class StrangleStrat(strategy.Strategy):
 
     def __init__(self, eventQueue, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
                  underlying, orderQuantity, daysBeforeClose, expCycle=None, optimalDTE=None,
-                 minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, maxBuyingPower=None,
-                 profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, maxMidDev=None,
-                 minDaysSinceEarnings=None, minIVR=None):
+                 minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, profitTargetPercent=None,
+                 avoidAssignment=None, maxBidAsk=None, maxMidDev=None, minDaysSinceEarnings=None, minIVR=None):
 
         #For arguments that are not supported or don't have implementations, we return an exception to prevent confusion
         if not roc == None:
@@ -57,9 +55,6 @@ class StrangleStrat(strategy.Strategy):
         if not minIVR == None:
             raise NotImplementedError, "Specifying implied volatility rank currently not implemented / supported"
 
-        if not maxBuyingPower == None:
-            raise NotImplementedError, "Specifying max buying power not implemented / supported"
-
         self.__eventQueue = eventQueue
         self.__strategy = "strangle"
         self.__optCallDelta = optCallDelta
@@ -69,8 +64,8 @@ class StrangleStrat(strategy.Strategy):
 
         strategy.Strategy.__init__(self, startTime, self.__strategy, buyOrSell, underlying, orderQuantity,
                                    daysBeforeClose, expCycle, optimalDTE, minimumDTE, roc, minDaysToEarnings,
-                                   minCredit, maxBuyingPower, profitTargetPercent, avoidAssignment,
-                                   maxBidAsk, maxMidDev, minDaysSinceEarnings, minIVR)
+                                   minCredit, profitTargetPercent, avoidAssignment, maxBidAsk, maxMidDev,
+                                   minDaysSinceEarnings, minIVR)
 
         # For debugging open file
         #self._f = open('stranglesCreated', 'w')
@@ -95,27 +90,17 @@ class StrangleStrat(strategy.Strategy):
         maxCallDelta:  max delta for call, usually around 30 delta
         optPutDelta:  optimal delta for put, usually around 16 delta
         maxPutDelta:  max delta for put, usually around 30 delta
-        startDateTime:  date/time to start the live trading or backtest
-        strategy:  option strategy to use -- e.g., iron condor, strangle
-        buyOrSell:  do we buy an iron condor or sell an iron condor? 0 = buy, 1 = sell
-        underlying:  which underlying to use for the strategy
-        orderQuantity:  number of strangles, iron condors, etc
-        daysBeforeClose:  number of days before expiration to close the trade
 
         Optional:
         expCycle:  specifies if we want to do monthly ('m'); unspecified means we can do weekly, quarterly, etc
         optimalDTE:  optimal number of days before expiration to put on strategy
         minimumDTE:  minimum number of days before expiration to put on strategy
-        roc:  minimal return on capital for overall trade as a decimal
-        minDaysToEarnings:  minimum number of days to put on trade before earnings
-        minCredit:  minimum credit to collect on overall trade
-        maxBuyingPower:  maximum buying power to use on overall trade
-        profitTargetPercent:  percentage of initial credit to use when closing trade
-        avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
+        roc:  minimal return on capital for overall trade as a decimal (not handled)
+        minDaysToEarnings:  minimum number of days to put on trade before earnings (not handled)
+        minCredit:  minimum credit to collect on overall trade (not handled)
         maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
-        maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
-        minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy
-        minIVR:  minimum implied volatility rank needed to put on strategy
+        minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy (not handled)
+        minIVR:  minimum implied volatility rank needed to put on strategy (not handled)
 
         We go through each option in the option chain and find all of the options that meet the criteria.  If there
         are multiple options that meet the criteria, we choose the first one, but we could use some other type of
@@ -153,6 +138,11 @@ class StrangleStrat(strategy.Strategy):
                 if not option.getDelta() <= self.getMaxCallDelta():
                     continue
 
+                # Check if bid / ask of option < maxBidAsk specific in strangle strategy
+                if not self.getMaxBidAsk() == None:
+                    if self.calcBidAskDiff(option.getBidPrice(), option.getAskPrice()) > self.getMaxBidAsk():
+                        continue
+
                 # Get current DTE in days
                 currentDTE = self.getNumDays(option.getDateTime(), option.getDTE())
 
@@ -185,6 +175,11 @@ class StrangleStrat(strategy.Strategy):
                 if not option.getDelta() >= self.getMaxPutDelta():
                     continue
 
+                # Check if bid / ask of option < maxBidAsk specific in strangle strategy
+                if not self.getMaxBidAsk() == None:
+                    if self.calcBidAskDiff(option.getBidPrice(), option.getAskPrice()) > self.getMaxBidAsk():
+                        continue
+
                 # Get current DTE in days
                 currentDTE = self.getNumDays(option.getDateTime(), option.getDTE())
 
@@ -215,14 +210,27 @@ class StrangleStrat(strategy.Strategy):
             # We create a strangle option primitive; the strangle primitive will have several of the
             # arguments from the init of StrangleStrat class
             strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt,
-                                            self.getDaysBeforeClose(), self.getROC(), self.getMaxBuyingPower(),
-                                            self.getProfitTargetPercent(), self.getAvoidAssignmentFlag(),
-                                            self.getMaxBidAsk(), self.getMaxMidDev())
+                                            self.getDaysBeforeClose(), self.getROC(), self.getProfitTargetPercent(),
+                                            self.getAvoidAssignmentFlag(), self.getMaxBidAsk(), self.getMaxMidDev())
 
             # Create signal event to put on strangle strategy and add to queue
             event = signalEvent.SignalEvent()
             event.createEvent(strangleObj)
             self.__eventQueue.put(event)
+
+    def calcBidAskDiff(self, bidPrice, askPrice):
+        '''
+        Calculate the absolute difference between the bid and ask price
+        If any of the arguments are <= 0, return a very large difference (100)
+        :param bidPrice: price at which the option can be sold
+        :param askPrice: price at which the option can be bought
+        :return: absolute difference; 100 if bidPrice of askPrice are less than zero or NaN
+        '''
+        if self.isNumber(bidPrice) and self.isNumber(askPrice) and bidPrice > 0 and askPrice > 0:
+            return abs(bidPrice - askPrice)
+        else:
+            return 100
+
 
     def isMonthlyExp(self, dateTime):
         '''
@@ -253,3 +261,14 @@ class StrangleStrat(strategy.Strategy):
         :return: number of days between curDateTime and expDateTime
         '''
         return (expDateTime - curDateTime).days
+
+    def isNumber(self, s):
+        '''
+        Check if string is a number
+        :return: True if string is a number; False otherwise
+        '''
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False

@@ -18,7 +18,6 @@ class Strategy(object):
          roc:  minimal return on capital for overall trade as a decimal
          minDaysToEarnings:  minimum number of days to put on trade before earnings
          minCredit:  minimum credit to collect on overall trade
-         maxBuyingPower:  maximum buying power to use on overall trade
          profitTargetPercent:  percentage of initial credit to use when closing trade
          avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
          maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
@@ -29,8 +28,8 @@ class Strategy(object):
 
      def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, expCycle=None,
                   optimalDTE=None, minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None,
-                  maxBuyingPower=None, profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None,
-                  maxMidDev=None, minDaysSinceEarnings=None, minIVR=None):
+                  profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, maxMidDev=None,
+                  minDaysSinceEarnings=None, minIVR=None):
 
          """Inits Strategy class with constructor data.  We check to make sure that
          the user doesn't try to instantiate the Strategy class"""
@@ -51,7 +50,6 @@ class Strategy(object):
          self.__roc = roc
          self.__minDaysToEarnings = minDaysToEarnings
          self.__minCredit = minCredit
-         self.__maxBuyingPower = maxBuyingPower
          self.__profitTargetPercent = profitTargetPercent
          self.__avoidAssignment = avoidAssignment
          self.__maxBidAsk = maxBidAsk
@@ -94,9 +92,6 @@ class Strategy(object):
 
      def getMinCredit(self):
          return self.__minCredit
-
-     def getMaxBuyingPower(self):
-         return self.__maxBuyingPower
 
      def getProfitTargetPercent(self):
          return self.__profitTargetPercent

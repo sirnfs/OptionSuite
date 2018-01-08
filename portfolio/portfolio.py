@@ -24,8 +24,9 @@ class Portfolio(object):
 
     def __init__(self, startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade):
 
-        # Portfolio risk management
         self.__startingCapital = startingCapital
+
+        # Portfolio risk management
         self.__maxCapitalToUse = maxCapitalToUse
         self.__maxCapitalToUsePerTrade = maxCapitalToUsePerTrade
 
@@ -45,11 +46,18 @@ class Portfolio(object):
 
     def onSignal(self, event):
         """Handle a new signal event; indicates that a new position should be added to the portfolio
-        if portfolio risk conditions are satisfied
+        if portfolio risk management conditions are satisfied
 
         :param event: event to be handled by portfolio; signal event in this case
 
         """
+        # Get the data from the tick event
+        eventData = event.getData()
+
+        # Determine if the eventData meets the portfolio risk management -- this will eventually be moved to
+        # a separate risk management module
+
+
 
         pass
 

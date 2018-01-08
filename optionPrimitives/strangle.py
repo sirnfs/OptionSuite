@@ -8,10 +8,11 @@ class Strangle(OptionPrimitive):
            callOpt:  call option
            putOpt:  put option
            daysBeforeClosing:  number of days before expiration to close the trade
+           profitLoss: profit or loss value for current strange position
+           calcBuyingPower:  calculated buying power needed to put on strangle (
 
         Optional attributes:
            roc:  minimal return on capital for overall trade as a decimal
-           maxBuyingPower:  maximum buying power to use on overall trade
            profitTargetPercent:  percentage of initial credit to use when closing trade
            avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
            maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
@@ -25,11 +26,11 @@ class Strangle(OptionPrimitive):
         self.__callOpt = callOpt
         self.__daysBeforeClosing = daysBeforeClosing
         self.__roc = roc
-        self.__maxBuyingPower = maxBuyingPower
         self.__profitTargetPercent = profitTargetPercent
         self.__avoidAssignment = avoidAssignment
         self.__maxBidAsk = maxBidAsk
         self.__maxMidDev = maxMidDev
+        self.__profitLoss = 0
 
     def addPrimitive(self):
         pass
