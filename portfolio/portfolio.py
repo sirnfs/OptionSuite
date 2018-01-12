@@ -56,7 +56,7 @@ class Portfolio(object):
 
         # Determine if the eventData meets the portfolio risk management -- this will eventually be moved to
         # a separate risk management module
-
+        capitalRequired = eventData.getBuyingPower()
 
 
         pass
