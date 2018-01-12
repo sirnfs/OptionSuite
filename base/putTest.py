@@ -1,14 +1,14 @@
 import unittest
 import put
 
-class TestCallOption(unittest.TestCase):
-    def testCallOptionCreation(self):
+class TestPutOption(unittest.TestCase):
+    def testPutOptionCreation(self):
 
         #Create PUT option
-        callOption = put.Put('SPY', 250, 0.3, 45)
+        putOption = put.Put('SPY', 250, 0.3, 45)
 
-        self.assertEqual(callOption.getStrikePrice(), 250)
-        self.assertEqual(callOption.getUnderlyingTicker(), 'SPY')
+        self.assertEqual(putOption.getStrikePrice(), 250)
+        self.assertEqual(putOption.getUnderlyingTicker(), 'SPY')
 
 if __name__ == '__main__':
     unittest.main()

@@ -10,6 +10,13 @@ class OptionPrimitive(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def getBuyingPower(self):
+        """Used to calculate the buying power needed for the
+        option primitive
+        """
+        pass
+
+    @abstractmethod
     def addPrimitive(self):
         """Used to add the strategy to the order book
            This is not closing out an order, and it can
