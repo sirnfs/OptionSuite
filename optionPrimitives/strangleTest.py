@@ -17,16 +17,16 @@ class TestStrangle(unittest.TestCase):
 
         # Create put and call options
         # Create PUT option
-        putOpt = put.Put('SPX', 2675, 0.15, 35, underlyingPrice=2767.56, bidPrice=7.60, askPrice=7.60)
+        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45)
         # Create CALL option
-        callOpt = call.Call('SPX', 2850, -0.11, 35, underlyingPrice=2767.56, bidPrice=3.05, askPrice=3.05)
+        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20)
 
         # Create Strangle
         strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, daysBeforeClosing)
 
         # Check buying power calc
         buyingPower = strangleObj.getBuyingPower()
-        self.assertAlmostEqual(buyingPower, 48172.20, 2)
+        self.assertAlmostEqual(buyingPower, 64045.0, 2)
 
 if __name__ == '__main__':
     unittest.main()

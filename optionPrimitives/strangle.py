@@ -60,13 +60,13 @@ class Strangle(OptionPrimitive):
         callStrikePrice = self.__callOpt.getStrikePrice()
         # Assumes that current option price is the mid price.
         currentCallPrice = (self.__callOpt.getBidPrice() + self.__callOpt.getAskPrice()) / 2
-        callBuyingPower1 = ((0.2*underlyingPrice)-(callStrikePrice - underlyingPrice) + currentCallPrice) * \
+        callBuyingPower1 = ((0.25*underlyingPrice)-(callStrikePrice - underlyingPrice) + currentCallPrice) * \
                            (self.__numContracts*100)
 
         # Handle put side of strangle
         putStrikePrice = self.__putOpt.getStrikePrice()
         currentPutPrice = (self.__putOpt.getBidPrice() + self.__putOpt.getAskPrice()) / 2
-        putBuyingPower1 = ((0.2 * underlyingPrice)-(underlyingPrice - putStrikePrice) + currentPutPrice) * \
+        putBuyingPower1 = ((0.25 * underlyingPrice)-(underlyingPrice - putStrikePrice) + currentPutPrice) * \
                           (self.__numContracts*100)
 
         # Decide which side requires more buying power; if both sides require same buying power, use the premium
@@ -86,10 +86,10 @@ class Strangle(OptionPrimitive):
         # Method 2 - 15% rule -- 15% of the exercise value plus premium value.
 
         # Handle call side of strangle
-        callBuyingPower2 = (0.1 * callStrikePrice + currentCallPrice) * self.__numContracts * 100
+        callBuyingPower2 = (0.15 * callStrikePrice + currentCallPrice) * self.__numContracts * 100
 
         # Handle put side of strangle
-        putBuyingPower2 = (0.1 * putStrikePrice + currentPutPrice) * self.__numContracts * 100
+        putBuyingPower2 = (0.15 * putStrikePrice + currentPutPrice) * self.__numContracts * 100
 
         # Decide which side requires more buying power; if both sides require same buying power, use the premium
         # from the side which has a higher option price (more premium)
