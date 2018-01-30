@@ -21,6 +21,26 @@ class NakedPut(OptionPrimitive):
     def removePrimitive(self):
         pass
 
+    def getDelta(self):
+        """Used to get the delta for the strangle
+        """
+        pass
+
+    def getVega(self):
+        """Used to get the vega for the strangle
+        """
+        pass
+
+    def getTheta(self):
+        """Used to get the theta for the strangle
+        """
+        pass
+
+    def getGamma(self):
+        """Used to get the gamma for the strangle
+        """
+        pass
+
     def getNumContracts(self):
         """This function returns the number of contracts for the overall
         primitive, and it should not confused with the number of option 

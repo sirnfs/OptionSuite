@@ -17,6 +17,30 @@ class OptionPrimitive(object):
         pass
 
     @abstractmethod
+    def getDelta(self):
+        """Used to get the delta for the option primitive
+        """
+        pass
+
+    @abstractmethod
+    def getVega(self):
+        """Used to get the vega for the option primitive
+        """
+        pass
+
+    @abstractmethod
+    def getTheta(self):
+        """Used to get the theta for the option primitive
+        """
+        pass
+
+    @abstractmethod
+    def getGamma(self):
+        """Used to get the gamma for the option primitive
+        """
+        pass
+
+    @abstractmethod
     def addPrimitive(self):
         """Used to add the strategy to the order book
            This is not closing out an order, and it can
