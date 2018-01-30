@@ -44,7 +44,7 @@ class Portfolio(object):
         self.__totGamma = None
 
         # Array / list to hold option primitives
-        self.positions = []
+        self.__positions = []
 
     def getNetLiq(self):
         return self.__netLiq
@@ -54,6 +54,9 @@ class Portfolio(object):
 
     def getTotalBuyingPower(self):
         return self.__totBuyingPower
+
+    def getPositions(self):
+        return self.__positions
 
     def onSignal(self, event):
         """Handle a new signal event; indicates that a new position should be added to the portfolio
@@ -73,9 +76,10 @@ class Portfolio(object):
         # than the maximum allowed per trade, we add the position to the portfolio
         if ((self.__totBuyingPower < self.__netLiq*self.__maxCapitalToUse) and
             (tradeCapReq < self.__netLiq*self.__maxCapitalToUsePerTrade)):
-            self.positions.append(eventData)
+            self.__positions.append(eventData)
+            self.__totBuyingPower += eventData.getBuyingPower()
 
-        pass
+            # TODO: update delta, vega, theta, gamma
 
 
 

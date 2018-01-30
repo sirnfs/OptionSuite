@@ -7,16 +7,16 @@ class Strangle(OptionPrimitive):
            orderQuantity:  number of strangles
            callOpt:  call option
            putOpt:  put option
-           daysBeforeClosing:  number of days before expiration to close the trade
 
         Optional attributes:
+           daysBeforeClosing:  number of days before expiration to close the trade
            roc:  minimal return on capital for overall trade as a decimal
            profitTargetPercent:  percentage of initial credit to use when closing trade
            avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
            maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
            maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
     """
-    def __init__(self, orderQuantity, callOpt, putOpt, daysBeforeClosing, roc=None, profitTargetPercent=None,
+    def __init__(self, orderQuantity, callOpt, putOpt, daysBeforeClosing=None, roc=None, profitTargetPercent=None,
                  avoidAssignment=None, maxBidAsk=None, maxMidDev=None):
 
         self.__numContracts = orderQuantity
@@ -30,10 +30,33 @@ class Strangle(OptionPrimitive):
         self.__maxMidDev = maxMidDev
         self.__profitLoss = 0
 
+        # TODO?? Should we do this?  if orderQuantity > 1, duplicate call and put options; we'd like to have
+        # orderQuantity number of calls and puts
+
     def addPrimitive(self):
         pass
 
     def removePrimitive(self):
+        pass
+
+    def getDelta(self):
+        """Used to get the delta for the strangle
+        """
+        pass
+
+    def getVega(self):
+        """Used to get the vega for the strangle
+        """
+        pass
+
+    def getTheta(self):
+        """Used to get the theta for the strangle
+        """
+        pass
+
+    def getGamma(self):
+        """Used to get the gamma for the strangle
+        """
         pass
 
     def getNumContracts(self):
