@@ -77,3 +77,8 @@ class NakedPut(OptionPrimitive):
         # Return the highest buying power from the two methods
         return max(putBuyingPower1, putBuyingPower2)
 
+    def updateValues(self, tickData):
+        """Based on the latest pricing data, update the option values for the naked put
+        :param tickData: option chain with pricing information (puts, calls)
+        """
+        pass

@@ -1,4 +1,5 @@
 from optionPrimitive import OptionPrimitive
+import logging
 
 class Strangle(OptionPrimitive):
     """This class sets up the strangle option primitive
@@ -42,22 +43,46 @@ class Strangle(OptionPrimitive):
     def getDelta(self):
         """Used to get the delta for the strangle
         """
-        pass
+        if self.__putOpt.getDelta() and self.__putOpt.getDelta():
+            totPutDelta = self.__numContracts*self.__putOpt.getDelta()
+            totCallDelta = self.__numContracts*self.__callOpt.getDelta()
+
+            return (totCallDelta + totPutDelta)
+        else:
+            return None
 
     def getVega(self):
         """Used to get the vega for the strangle
         """
-        pass
+        if self.__putOpt.getVega() and self.__callOpt.getVega():
+            totPutVega = self.__numContracts * self.__putOpt.getVega()
+            totCallVega = self.__numContracts * self.__callOpt.getVega()
+
+            return (totCallVega + totPutVega)
+        else:
+            return None
 
     def getTheta(self):
         """Used to get the theta for the strangle
         """
-        pass
+        if self.__putOpt.getTheta() and self.__callOpt.getTheta():
+            totPutTheta = self.__numContracts * self.__putOpt.getTheta()
+            totCallTheta = self.__numContracts * self.__callOpt.getTheta()
+
+            return (totCallTheta + totPutTheta)
+        else:
+            return None
 
     def getGamma(self):
         """Used to get the gamma for the strangle
         """
-        pass
+        if self.__putOpt.getGamma() and self.__callOpt.getGamma():
+            totPutGamma = self.__numContracts * self.__putOpt.getGamma()
+            totCallGamma = self.__numContracts * self.__callOpt.getGamma()
+
+            return (totCallGamma + totPutGamma)
+        else:
+            return None
 
     def getNumContracts(self):
         """This function returns the number of contracts for the overall
@@ -131,4 +156,30 @@ class Strangle(OptionPrimitive):
         # Return the highest buying power from the two methods
         return max(methodOneBuyingPower, methodTwoBuyingPower)
 
+    def updateValues(self, tickData):
+        """Based on the latest pricing data, update the option values for the strangle
+        :param tickData: option chain with pricing information (puts, calls)
+        """
 
+        # TODO:  can we do this search faster?
+        # Work with put option first
+        putOpt = self.__putOpt
+
+        # Get put strike
+        putStrike = putOpt.getStrikePrice()
+
+        # Get option expiration date / time
+        putExpiration = putOpt.getDTE()
+
+        # Go through the tickData to find the put option with a strike price that matches the putStrike above
+        # Note that this should not return more than one option since we specify the strike price, expiration, and
+        # the option type (PUT)
+        matchingOption = None
+        for option in tickData:
+            if (option.getStrikePrice() == putStrike and option.getOptionType() == 'PUT'
+                    and option.getDTE() == putExpiration):
+                matchingOption = option
+                break
+
+        if not matchingOption:
+          logging.warning("No matching PUT was found in the option chain for the strangle")

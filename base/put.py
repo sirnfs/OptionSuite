@@ -14,6 +14,3 @@ class Put(option.Option):
                                underlyingPrice, underlyingTradePrice, optionSymbol, optionAlias, bidPrice, askPrice,
                                tradePrice, openInterest, volume, dateTime, theta, gamma, rho, vega, impliedVol,
                                exchangeCode, exercisePrice, assignPrice, openCost, closeCost, tradeID)
-
-
-        # def getUnderlyingPrice(self):

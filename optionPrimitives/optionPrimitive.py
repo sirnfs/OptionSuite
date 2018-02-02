@@ -41,6 +41,13 @@ class OptionPrimitive(object):
         pass
 
     @abstractmethod
+    def updateValues(self, tickData):
+        """Based on the latest pricing data, update the option values
+        :param tickData: option chain with pricing information
+        """
+        pass
+
+    @abstractmethod
     def addPrimitive(self):
         """Used to add the strategy to the order book
            This is not closing out an order, and it can

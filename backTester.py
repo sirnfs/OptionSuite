@@ -1,9 +1,10 @@
 import Queue as queue
 from dataHandler import csvData
 from strategyManager import strangleStrat
-from portfolio import portfolio
+from portfolioManager import portfolio
 from datetime import datetime
 import pytz
+import logging
 """
 This file contains a basic strategy example, and can be though of 
 as an end-to-end test of the whole Backtester project
@@ -36,7 +37,6 @@ class BackTestSession(object):
         optimalDTE = 45
         minimumDTE = 25
         minCredit = 0.5
-        maxBuyingPower = 4000
         profitTargetPercent = 50
         maxBidAsk = 0.05
         minDaysToEarnings = 25
@@ -46,19 +46,14 @@ class BackTestSession(object):
                                                            maxPutDelta, startTime, buyOrSell, underlying,
                                                            orderQuantity, daysBeforeClose, optimalDTE=optimalDTE,
                                                            minimumDTE=minimumDTE, minDaysToEarnings=minDaysToEarnings,
-                                                           minCredit=minCredit, maxBuyingPower=maxBuyingPower,
-                                                           profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
+                                                           minCredit=minCredit, profitTargetPercent=profitTargetPercent,
+                                                           maxBidAsk=maxBidAsk,
                                                            minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
 
         startingCapital = 100000
-        maxCapitalToUse = 50 #percent
-        maxCapitalToUsePerTrade = 5 #percent
-        self.portfolio = portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
-
-
-        #self.__orderExecution = orderExecution()
-        #self.__riskManagement = riskManagement()
-
+        maxCapitalToUse = 0.5
+        maxCapitalToUsePerTrade = 0.05
+        self.portfolioManager = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
 
 def run(session):
 
@@ -71,15 +66,11 @@ def run(session):
         else:
             if event is not None:
                 if event.type == 'TICK':
-                    pass
                     #self.cur_time = event.time
                     session.strategyManager.checkForSignal(event)
-                    #self.portfolio_handler.update_portfolio_value()
-                    #self.statistics.update(event.time, self.portfolio_handler)
+                    session.portfolioManager.updatePortfolio(event)
                 elif event.type == 'SIGNAL':
-                    pass
-                    #self.riskManager.checkRisk(event)
-                    session.portfolio.onSignal(event)
+                    session.portfolioManager.onSignal(event)
                 elif event.type == 'ORDER':
                     pass
                     #self.execution_handler.execute_order(event)
@@ -91,6 +82,9 @@ def run(session):
 
 
 if __name__ == "__main__":
+
+    # Set up logging for the session
+    logging.basicConfig(filename='session.log', level=logging.DEBUG)
 
     #Create a session and configure the session
     session = BackTestSession()
