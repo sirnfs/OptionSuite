@@ -220,10 +220,10 @@ class CsvData(DataHandler):
             try:
                 local = pytz.timezone('US/Eastern')
                 #Convert time zone of data 'US/Eastern' to UTC time
-                DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%Y")
+                DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%y")
                 DTE = local.localize(DTE, is_dst=None)
                 DTE = DTE.astimezone(pytz.utc)
-                curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%Y")
+                curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%y")
                 curDateTime = local.localize(curDateTime, is_dst=None)
                 curDateTime = curDateTime.astimezone(pytz.utc)
             except:

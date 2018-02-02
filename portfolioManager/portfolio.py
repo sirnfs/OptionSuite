@@ -1,3 +1,4 @@
+import logging
 
 class Portfolio(object):
     """This class creates a portfolio to hold all open positions
@@ -34,14 +35,14 @@ class Portfolio(object):
         # Overall portfolio intrinsics
         self.__netLiq = startingCapital
         self.__totBuyingPower = 0
-        self.__PLopen = None
-        self.__PLday = None
-        self.__PLopenPercent = None
-        self.__PLdayPercent = None
-        self.__totDelta = None
-        self.__totVega = None
-        self.__totTheta = None
-        self.__totGamma = None
+        self.__PLopen = 0
+        self.__PLday = 0
+        self.__PLopenPercent = 0
+        self.__PLdayPercent = 0
+        self.__totDelta = 0
+        self.__totVega = 0
+        self.__totTheta = 0
+        self.__totGamma = 0
 
         # Array / list to hold option primitives
         self.__positions = []
@@ -54,6 +55,18 @@ class Portfolio(object):
 
     def getTotalBuyingPower(self):
         return self.__totBuyingPower
+
+    def getDelta(self):
+        return self.__totDelta
+
+    def getTheta(self):
+        return self.__totTheta
+
+    def getVega(self):
+        return self.__totVega
+
+    def getGamma(self):
+        return self.__totGamma
 
     def getPositions(self):
         return self.__positions
@@ -79,7 +92,45 @@ class Portfolio(object):
             self.__positions.append(eventData)
             self.__totBuyingPower += eventData.getBuyingPower()
 
-            # TODO: update delta, vega, theta, gamma
+            # Update total delta, vega, theta and gamma for portfolio
+            if eventData.getDelta():
+                self.__totDelta += eventData.getDelta()
+            else:
+                logging.warning("No delta values were found in the option primitive")
+            if eventData.getGamma():
+                self.__totGamma += eventData.getGamma()
+            else:
+                logging.warning("No gamma values were found in the option primitive")
+            if eventData.getTheta():
+                self.__totTheta += eventData.getTheta()
+            else:
+                logging.warning("No theta values were found in the option primitive")
+            if eventData.getVega():
+                self.__totVega += eventData.getVega()
+            else:
+                logging.warning("No vega values were found in the option primitive")
+        else:
+            if self.__totBuyingPower < self.__netLiq * self.__maxCapitalToUse:
+                logging.info("Not enough buying power available based on maxCapitalToUse threshold")
+            else:
+                logging.info("Trade uses too much buying power based on maxCapitalToUsePerTrade threshold")
+
+    def updatePortfolio(self, event):
+        """
+        Updates the intrinsics of the portfolio by updating the values of the options used in the different
+        optionPrimitives.
+        :param event: tick event with the option chain which will be be used to update the portfolio
+        """
+        # Get the data from the tick event
+        tickData = event.getData()
+
+        # Go through the positions currently in the portfolio and update the prices
+        for curPosition in self.__positions:
+            curPosition.updateValues(tickData)
+
+
+
+
 
 
 

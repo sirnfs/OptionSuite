@@ -5,7 +5,8 @@ class TestChunks(unittest.TestCase):
 
     def testChunkReadsFromCSV(self):
       #Open CSV with a reader iterator
-      reader = pd.read_csv('/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017/RawIV.csv', iterator=True)
+      reader = pd.read_csv('/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017/RawIV.csv',
+                           iterator=True)
       #print(reader._engine._reader.table_width)
 
       try:

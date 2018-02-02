@@ -14,13 +14,3 @@ class Call(option.Option):
                                underlyingPrice, underlyingTradePrice, optionSymbol, optionAlias, bidPrice, askPrice,
                                tradePrice, openInterest, volume, dateTime, theta, gamma, rho, vega, impliedVol,
                                exchangeCode, exercisePrice, assignPrice, openCost, closeCost, tradeID)
-
-
-
-    #def getUnderlyingTicker(self):
-
-    #    return self.getUnderlyingTicker()
-
-
-    #def getStrikePrice(self):
-    #    return self.getStrikePrice()

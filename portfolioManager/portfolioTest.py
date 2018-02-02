@@ -4,6 +4,8 @@ from optionPrimitives import strangle
 from base import put
 from base import call
 from events import signalEvent
+from dataHandler import csvData
+import Queue as queue
 
 class TestPortfolio(unittest.TestCase):
 
@@ -25,10 +27,10 @@ class TestPortfolio(unittest.TestCase):
         # Check that the initial buying power being used is zero.
         self.assertEqual(self.portfolioObj.getTotalBuyingPower(), 0)
 
-    def testOnSignalEvent(self):
+    def testOnSignal(self):
 
         # Create a strangle
-        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45)
+        putOpt = put.Put('SPX', 2690, 0.16, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45)
         # Create CALL option
         callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20)
 
@@ -50,6 +52,55 @@ class TestPortfolio(unittest.TestCase):
         # Check that the buying power used by the strangle is correct
         self.assertAlmostEqual(self.portfolioObj.getTotalBuyingPower(), 64045.0, 2)
 
+        # Get the total delta value of the portfolio and check that it is 0.01
+        self.assertAlmostEqual(self.portfolioObj.getDelta(), 0.01, 2)
+
+    def testUpdatePortfolio(self):
+        """Test the ability to update option values for a position in the portfolio
+        """
+        startingCapital = 1000000
+        maxCapitalToUse = 0.5
+        maxCapitalToUsePerTrade = 0.5
+        portfolioObj = portfolio.Portfolio(self.startingCapital, self.maxCapitalToUse,
+                                                self.maxCapitalToUsePerTrade)
+
+        # Get an option chain from the CSV
+        # Create CsvData class object
+        dataProvider = 'iVolatility'
+        directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017'
+        filename = 'RawIV_5day_sample.csv'
+        chunkSize = 10000
+        eventQueue = queue.Queue()
+        csvObj = csvData.CsvData(directory, filename, dataProvider, eventQueue, chunkSize)
+
+        # Get the first option chain
+        firstOptionChainValid = csvObj.getOptionChain()
+        queueObj = eventQueue.get(False)
+        firstOptionChainData = queueObj.getData()
+
+        # Choose two of the options in the first option chain to create a strangle; using first expiration
+        putObj = firstOptionChainData[279] # -0.16 delta put
+        callObj = firstOptionChainData[310] # 0.16 delta call
+
+        # Create strangle an add to portfolio
+        orderQuantity = 1
+        strangleObj = strangle.Strangle(orderQuantity, callObj, putObj)
+
+        # Create signal event
+        event = signalEvent.SignalEvent()
+        event.createEvent(strangleObj)
+
+        # Create portfolio onSignal event, which adds the position to the portfolio
+        portfolioObj.onSignal(event)
+
+        # Next, get the prices for the next day (1/4/11) and update the portfolio values
+        newOptionChainValid = csvObj.getOptionChain()
+        tickEvent = eventQueue.get(False)
+
+        # Update portfolio values
+        portfolioObj.updatePortfolio(tickEvent)
+
+        pass
 
 if __name__ == '__main__':
     unittest.main()
