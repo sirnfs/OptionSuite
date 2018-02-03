@@ -143,26 +143,38 @@ class Portfolio(object):
             # Update the option intrinsic values
             curPosition.updateValues(tickData)
 
-            # Update total delta, vega, theta and gamma for portfolio
-            if curPosition.getDelta():
-                self.__totDelta += curPosition.getDelta()
-            else:
-                logging.warning("No delta values were found in the option primitive after tick update")
-            if curPosition.getGamma():
-                self.__totGamma += curPosition.getGamma()
-            else:
-                logging.warning("No gamma values were found in the option primitive after tick update")
-            if curPosition.getTheta():
-                self.__totTheta += curPosition.getTheta()
-            else:
-                logging.warning("No theta values were found in the option primitive after tick update")
-            if curPosition.getVega():
-                self.__totVega += curPosition.getVega()
-            else:
-                logging.warning("No vega values were found in the option primitive after tick update")
+            # TODO:  determine if we should close out this position
 
-            # Update the buying power
-            self.__totBuyingPower += curPosition.getBuyingPower()
+            # Update portfolio values; e.g., total delta, vega, buying power, net liq
+            self.__calcPortfolioValues(curPosition)
 
-            # Update profit / loss numbers
-            self.__netLiq += curPosition.calcProfitLoss()
+    def __calcPortfolioValues(self, curPosition):
+        """Private /internal function used to update portfolio values
+
+        :param curPosition: current position in portfolio being processed
+        """
+
+        if curPosition.getDelta():
+            self.__totDelta += curPosition.getDelta()
+        else:
+            logging.warning("No delta values were found in the option primitive after tick update")
+        if curPosition.getGamma():
+            self.__totGamma += curPosition.getGamma()
+        else:
+            logging.warning("No gamma values were found in the option primitive after tick update")
+        if curPosition.getTheta():
+            self.__totTheta += curPosition.getTheta()
+        else:
+            logging.warning("No theta values were found in the option primitive after tick update")
+        if curPosition.getVega():
+            self.__totVega += curPosition.getVega()
+        else:
+            logging.warning("No vega values were found in the option primitive after tick update")
+
+        # Update the buying power
+        self.__totBuyingPower += curPosition.getBuyingPower()
+
+        # Update profit / loss numbers
+        self.__netLiq += curPosition.calcProfitLoss()
+
+        # TODO:  handle PLopen, PLday, PLopenPercent PLdayPercent calculations
