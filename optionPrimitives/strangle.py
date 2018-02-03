@@ -8,6 +8,7 @@ class Strangle(OptionPrimitive):
            orderQuantity:  number of strangles
            callOpt:  call option
            putOpt:  put option
+           buyOrSell:  indicates if we want to buy or sell the strangle ("BUY" or "SELL")
 
         Optional attributes:
            daysBeforeClosing:  number of days before expiration to close the trade
@@ -17,19 +18,19 @@ class Strangle(OptionPrimitive):
            maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
            maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
     """
-    def __init__(self, orderQuantity, callOpt, putOpt, daysBeforeClosing=None, roc=None, profitTargetPercent=None,
-                 avoidAssignment=None, maxBidAsk=None, maxMidDev=None):
+    def __init__(self, orderQuantity, callOpt, putOpt, buyOrSell, daysBeforeClosing=None, roc=None,
+                 profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, maxMidDev=None):
 
         self.__numContracts = orderQuantity
         self.__putOpt = putOpt
         self.__callOpt = callOpt
+        self.__buyOrSell = buyOrSell
         self.__daysBeforeClosing = daysBeforeClosing
         self.__roc = roc
         self.__profitTargetPercent = profitTargetPercent
         self.__avoidAssignment = avoidAssignment
         self.__maxBidAsk = maxBidAsk
         self.__maxMidDev = maxMidDev
-        self.__profitLoss = 0
 
         # TODO?? Should we do this?  if orderQuantity > 1, duplicate call and put options; we'd like to have
         # orderQuantity number of calls and puts
@@ -83,6 +84,35 @@ class Strangle(OptionPrimitive):
             return (totCallGamma + totPutGamma)
         else:
             return None
+
+    def calcProfitLoss(self):
+        """Calculate the profit and loss for the strangle position based on option values when the trade
+        was placed and new option values.  Note that profit and loss are reversed if we buy or sell a put/call;
+        if we buy a put/call, we want the option value to increase; if we sell a put/call, we want the option value
+        to decrease.
+
+        :return: profit / loss (positive decimal for profit, negative decimal for loss)
+        """
+
+        # Handle profit / loss for put first
+        putOpt = self.__putOpt
+        putProfitLoss = putOpt.calcOptionPriceDiff()
+
+        # If we're buying the strangle, we will have a loss if the put option decreases in value
+        if self.__buyOrSell == "BUY":
+            putProfitLoss = -putProfitLoss
+
+        # Handle profit /loss for call second
+        callOpt = self.__callOpt
+        callProfitLoss = callOpt.calcOptionPriceDiff()
+
+        if self.__buyOrSell == "BUY":
+            callProfitLoss = -callProfitLoss
+
+        # Add the profit / loss of put and call, and multiply by the number of contracts
+        totProfitLoss = (putProfitLoss + callProfitLoss) * self.__numContracts
+
+        return totProfitLoss
 
     def getNumContracts(self):
         """This function returns the number of contracts for the overall
@@ -171,15 +201,44 @@ class Strangle(OptionPrimitive):
         # Get option expiration date / time
         putExpiration = putOpt.getDTE()
 
-        # Go through the tickData to find the put option with a strike price that matches the putStrike above
+        # Go through the tickData to find the PUT option with a strike price that matches the putStrike above
         # Note that this should not return more than one option since we specify the strike price, expiration, and
         # the option type (PUT)
-        matchingOption = None
+        matchingPutOption = None
         for option in tickData:
             if (option.getStrikePrice() == putStrike and option.getOptionType() == 'PUT'
                     and option.getDTE() == putExpiration):
-                matchingOption = option
+                matchingPutOption = option
                 break
 
-        if not matchingOption:
-          logging.warning("No matching PUT was found in the option chain for the strangle")
+        if not matchingPutOption:
+            logging.warning("No matching PUT was found in the option chain for the strangle")
+        else:
+            # Update option intrinsics
+            putOpt.updateIntrinsics(matchingPutOption)
+
+        # Work with call option
+        callOpt = self.__callOpt
+
+        # Get call strike
+        callStrike = callOpt.getStrikePrice()
+
+        # Get option expiration date / time
+        callExpiration = callOpt.getDTE()
+
+        # Go through the tickData to find the CALL option with a strike price that matches the callStrike above
+        # Note that this should not return more than one option since we specify the strike price, expiration, and
+        # the option type (CALL)
+        matchingCallOption = None
+        for option in tickData:
+            if (option.getStrikePrice() == callStrike and option.getOptionType() == 'CALL'
+                    and option.getDTE() == callExpiration):
+                matchingCallOption = option
+                break
+
+        if not matchingCallOption:
+            logging.warning("No matching CALL was found in the option chain for the strangle")
+        else:
+            # Update option intrinsics
+            callOpt.updateIntrinsics(matchingCallOption)
+

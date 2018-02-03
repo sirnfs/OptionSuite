@@ -30,7 +30,7 @@ class BackTestSession(object):
         optPutDelta = 16
         maxPutDelta = 30
         startTime = datetime.now(pytz.utc)
-        buyOrSell = 1 #0 = buy, 1 = sell (currently only support selling)
+        buyOrSell = "SELL" # "BUY" OR "SELL"
         underlying = 'AAPL'
         orderQuantity = 1
         daysBeforeClose = 5

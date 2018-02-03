@@ -14,3 +14,20 @@ class Call(option.Option):
                                underlyingPrice, underlyingTradePrice, optionSymbol, optionAlias, bidPrice, askPrice,
                                tradePrice, openInterest, volume, dateTime, theta, gamma, rho, vega, impliedVol,
                                exchangeCode, exercisePrice, assignPrice, openCost, closeCost, tradeID)
+
+    def updateIntrinsics(self, newOpt):
+        """Update the relevant values of the original option with those of the new option; e.g., update price, delta
+        :param newOpt: new option from the latest tick
+        """
+        self.setUnderlyingPrice(newOpt.getUnderlyingPrice())
+        self.setBidPrice(newOpt.getBidPrice())
+        self.setAskPrice(newOpt.getAskPrice())
+        self.setOpenInterest(newOpt.getOpenInterest())
+        self.setOptionVolume(newOpt.getOptionVolume())
+        self.setDateTime(newOpt.getDateTime())
+        self.setDelta(newOpt.getDelta())
+        self.setTheta(newOpt.getTheta())
+        self.setGamma(newOpt.getGamma())
+        self.setRho(newOpt.getRho())
+        self.setVega(newOpt.getVega())
+        self.setImpliedVol(newOpt.getImpliedVol())

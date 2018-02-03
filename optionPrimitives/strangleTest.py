@@ -22,7 +22,7 @@ class TestStrangle(unittest.TestCase):
         callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20)
 
         # Create Strangle
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, daysBeforeClosing)
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing)
 
         # Check buying power calc
         buyingPower = strangleObj.getBuyingPower()

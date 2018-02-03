@@ -103,6 +103,7 @@ class Option(object):
         self.__closeCost = closeCost
         self.__tradeID = tradeID
 
+    # Getters
     def getUnderlyingPrice(self):
         return self.__underlyingPrice
 
@@ -183,4 +184,51 @@ class Option(object):
 
     def getTradeID(self):
         return self.__tradeID
+
+    # Setters
+    def setUnderlyingPrice(self, underlyingPrice):
+        self.__underlyingPrice = underlyingPrice
+
+    def setBidPrice(self, bidPrice):
+        self.__bidPrice = bidPrice
+
+    def setAskPrice(self, askPrice):
+        self.__askPrice = askPrice
+
+    def setOpenInterest(self, openInterest):
+        self.__openInterest = openInterest
+
+    def setOptionVolume(self, optionVolume):
+        self.__volume = optionVolume
+
+    def setDateTime(self, dateTime):
+        self.__dateTime = dateTime
+
+    def setDelta(self, delta):
+        self.__delta = delta
+
+    def setTheta(self, theta):
+        self.__theta = theta
+
+    def setGamma(self, gamma):
+        self.__gamma = gamma
+
+    def setRho(self, rho):
+        self.__rho = rho
+
+    def setVega(self, vega):
+        self.__vega = vega
+
+    def setImpliedVol(self, impliedVol):
+        self.__impliedVol = impliedVol
+
+    # Calculations
+    def calcOptionPriceDiff(self):
+        """Calculate the difference in price of the put when the trade was placed versus its current value.
+        Specifically, diff = original price - current price.  The current price used is actually the mid price, or
+        the average of the bid price and ask price.
+
+        :return: price difference (original price - current price)
+        """
+        return (self.getTradePrice() - ((self.getBidPrice() + self.getAskPrice())/2.0))*100
 

@@ -16,7 +16,7 @@ class StrangleStrat(strategy.Strategy):
        General strategy attributes:
             startDateTime:  date/time to start the live trading or backtest
             strategy:  option strategy to use -- e.g., iron condor, strangle
-            buyOrSell:  do we buy an iron condor or sell an iron condor? 0 = buy, 1 = sell
+            buyOrSell:  do we buy an iron condor or sell an iron condor? "BUY" or "SELL"
             underlying:  which underlying to use for the strategy
             orderQuantity:  number of strangles, iron condors, etc
             daysBeforeClose:  number of days before expiration to close the trade
@@ -209,7 +209,7 @@ class StrangleStrat(strategy.Strategy):
             # self._f.flush()
             # We create a strangle option primitive; the strangle primitive will have several of the
             # arguments from the init of StrangleStrat class
-            strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt,
+            strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt, "SELL",
                                             self.getDaysBeforeClose(), self.getROC(), self.getProfitTargetPercent(),
                                             self.getAvoidAssignmentFlag(), self.getMaxBidAsk(), self.getMaxMidDev())
 
