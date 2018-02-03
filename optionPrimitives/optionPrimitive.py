@@ -41,6 +41,15 @@ class OptionPrimitive(object):
         pass
 
     @abstractmethod
+    def calcProfitLoss(self):
+        """Calculate the profit and loss for the option primitive based on option values when the trade
+        was placed and new option values
+
+        :return: profit / loss (positive decimal for profit, negative decimal for loss)
+        """
+        pass
+
+    @abstractmethod
     def updateValues(self, tickData):
         """Based on the latest pricing data, update the option values
         :param tickData: option chain with pricing information

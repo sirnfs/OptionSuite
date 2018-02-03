@@ -41,6 +41,14 @@ class NakedPut(OptionPrimitive):
         """
         pass
 
+    def calcProfitLoss(self):
+        """Calculate the profit and loss for the naked put position based on option values when the trade
+        was placed and new option values
+
+        :return: profit / loss (positive decimal for profit, negative decimal for loss)
+        """
+        pass
+
     def getNumContracts(self):
         """This function returns the number of contracts for the overall
         primitive, and it should not confused with the number of option 

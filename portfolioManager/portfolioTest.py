@@ -36,7 +36,7 @@ class TestPortfolio(unittest.TestCase):
 
         # Create Strangle
         orderQuantity = 1
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt)
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL")
 
         # Create signal event
         event = signalEvent.SignalEvent()
@@ -50,10 +50,10 @@ class TestPortfolio(unittest.TestCase):
         self.assertNotEqual(len(positions), 0)
 
         # Check that the buying power used by the strangle is correct
-        self.assertAlmostEqual(self.portfolioObj.getTotalBuyingPower(), 64045.0, 2)
+        self.assertAlmostEqual(self.portfolioObj.getTotalBuyingPower(), 64045.0)
 
         # Get the total delta value of the portfolio and check that it is 0.01
-        self.assertAlmostEqual(self.portfolioObj.getDelta(), 0.01, 2)
+        self.assertAlmostEqual(self.portfolioObj.getDelta(), 0.01)
 
     def testUpdatePortfolio(self):
         """Test the ability to update option values for a position in the portfolio
@@ -79,12 +79,12 @@ class TestPortfolio(unittest.TestCase):
         firstOptionChainData = queueObj.getData()
 
         # Choose two of the options in the first option chain to create a strangle; using first expiration
-        putObj = firstOptionChainData[279] # -0.16 delta put
-        callObj = firstOptionChainData[310] # 0.16 delta call
+        putObj = firstOptionChainData[217] # -0.172245 delta put
+        callObj = firstOptionChainData[248] # 0.154042 delta call
 
         # Create strangle an add to portfolio
         orderQuantity = 1
-        strangleObj = strangle.Strangle(orderQuantity, callObj, putObj)
+        strangleObj = strangle.Strangle(orderQuantity, callObj, putObj, "SELL")
 
         # Create signal event
         event = signalEvent.SignalEvent()
@@ -100,7 +100,13 @@ class TestPortfolio(unittest.TestCase):
         # Update portfolio values
         portfolioObj.updatePortfolio(tickEvent)
 
-        pass
+        # Check that the new portfolio values are correct (e.g., buying power, total delta, total gamma, etc)
+        self.assertAlmostEqual(portfolioObj.getTotalBuyingPower(), 28950.0)
+        self.assertAlmostEqual(portfolioObj.getVega(), 1.303171)
+        self.assertAlmostEqual(portfolioObj.getDelta(), -0.018826)
+        self.assertAlmostEqual(portfolioObj.getGamma(), 0.012173)
+        self.assertAlmostEqual(portfolioObj.getTheta(), -0.583284)
+        self.assertAlmostEqual(portfolioObj.getNetLiq(), 1000060.0)
 
 if __name__ == '__main__':
     unittest.main()

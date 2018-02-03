@@ -125,16 +125,44 @@ class Portfolio(object):
         tickData = event.getData()
 
         # Go through the positions currently in the portfolio and update the prices
+        # Reset the delta, gamma, theta, and vega values for the entire portfolio
+        self.__totDelta = 0
+        self.__totGamma = 0
+        self.__totVega = 0
+        self.__totTheta = 0
+        # Reset the total buying power for the portfolio, which will be recalculated
+        self.__totBuyingPower = 0
+        # Reset the PLopen, PLday, PLopenPercent PLdayPercent
+        self.__PLopen = 0
+        self.__PLday = 0
+        self.__PLopenPercent = 0
+        self.__PLdayPercent = 0
+
+        # Go through all positions in portfolio and do the updates
         for curPosition in self.__positions:
+            # Update the option intrinsic values
             curPosition.updateValues(tickData)
 
+            # Update total delta, vega, theta and gamma for portfolio
+            if curPosition.getDelta():
+                self.__totDelta += curPosition.getDelta()
+            else:
+                logging.warning("No delta values were found in the option primitive after tick update")
+            if curPosition.getGamma():
+                self.__totGamma += curPosition.getGamma()
+            else:
+                logging.warning("No gamma values were found in the option primitive after tick update")
+            if curPosition.getTheta():
+                self.__totTheta += curPosition.getTheta()
+            else:
+                logging.warning("No theta values were found in the option primitive after tick update")
+            if curPosition.getVega():
+                self.__totVega += curPosition.getVega()
+            else:
+                logging.warning("No vega values were found in the option primitive after tick update")
 
+            # Update the buying power
+            self.__totBuyingPower += curPosition.getBuyingPower()
 
-
-
-
-
-
-
-
-
+            # Update profit / loss numbers
+            self.__netLiq += curPosition.calcProfitLoss()
