@@ -108,5 +108,17 @@ class TestPortfolio(unittest.TestCase):
         self.assertAlmostEqual(portfolioObj.getTheta(), -0.583284)
         self.assertAlmostEqual(portfolioObj.getNetLiq(), 1000060.0)
 
+    def testPortfolioPositionRemoveManagement(self):
+        """Test that we can remove a managed position from the portfolio without affecting any of the other positions
+        in the portfolio
+        """
+        pass
+
+    def testPortfolioWithExpirationManagement(self):
+        """Put on a strangle; update portfolio values daily, and then manage the strangle when the daysBeforeClosing
+        threshold has been met.  Output statistics at every day to view the progression
+        """
+        pass
+
 if __name__ == '__main__':
     unittest.main()

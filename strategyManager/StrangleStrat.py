@@ -210,7 +210,7 @@ class StrangleStrat(strategy.Strategy):
             # We create a strangle option primitive; the strangle primitive will have several of the
             # arguments from the init of StrangleStrat class
             strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt, "SELL",
-                                            self.getDaysBeforeClose(), self.getROC(), self.getProfitTargetPercent(),
+                                            self.getDaysBeforeClose(), self.getProfitTargetPercent(),
                                             self.getAvoidAssignmentFlag(), self.getMaxBidAsk(), self.getMaxMidDev())
 
             # Create signal event to put on strangle strategy and add to queue
@@ -255,7 +255,7 @@ class StrangleStrat(strategy.Strategy):
 
     def getNumDays(self, curDateTime, expDateTime):
         '''
-        Determine if the number of days between the curDateTime and the expDateTime
+        Determine the number of days between the curDateTime and the expDateTime
         :param curDateTime: current date in mm/dd/yy format
         :param expDateTime: option expiration date in mm/dd/yy format
         :return: number of days between curDateTime and expDateTime

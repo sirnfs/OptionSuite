@@ -121,6 +121,7 @@ class Portfolio(object):
         optionPrimitives.
         :param event: tick event with the option chain which will be be used to update the portfolio
         """
+
         # Get the data from the tick event
         tickData = event.getData()
 
@@ -139,14 +140,19 @@ class Portfolio(object):
         self.__PLdayPercent = 0
 
         # Go through all positions in portfolio and do the updates
-        for curPosition in self.__positions:
+        for idx, curPosition in enumerate(self.__positions):
             # Update the option intrinsic values
             curPosition.updateValues(tickData)
 
-            # TODO:  determine if we should close out this position
+            # Update net liq
+            self.__netLiq += curPosition.calcProfitLoss()
+
+            # Determine if we should close out this position or do some type of management
+            positionClosed = self.__managePosition(curPosition, idx)
 
             # Update portfolio values; e.g., total delta, vega, buying power, net liq
-            self.__calcPortfolioValues(curPosition)
+            if not positionClosed:
+                self.__calcPortfolioValues(curPosition)
 
     def __calcPortfolioValues(self, curPosition):
         """Private /internal function used to update portfolio values
@@ -174,7 +180,17 @@ class Portfolio(object):
         # Update the buying power
         self.__totBuyingPower += curPosition.getBuyingPower()
 
-        # Update profit / loss numbers
-        self.__netLiq += curPosition.calcProfitLoss()
-
         # TODO:  handle PLopen, PLday, PLopenPercent PLdayPercent calculations
+
+    def __managePosition(self, curPosition, idx):
+        """Private / internal function to determine if we need to manage position (e.g., close out position or make
+        adjustments)
+        :param curPosition:  current position we are looking at in portfolio
+        :param idx:  index of position in portfolio
+        :return: True if position was closed; False otherwise
+        """
+
+        # Determine if the position should be managed by calling respective option primitive managePosition() function
+        if curPosition.managePosition():
+            # Remove position from portfolio
+            del(self.__positions[idx])

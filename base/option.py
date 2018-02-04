@@ -232,3 +232,22 @@ class Option(object):
         """
         return (self.getTradePrice() - ((self.getBidPrice() + self.getAskPrice())/2.0))*100
 
+    def getNumDaysLeft(self):
+        '''
+        Determine the number of days between the curDateTime and the expDateTime
+        curDateTime: current date in mm/dd/yy format
+        expDateTime: option expiration date in mm/dd/yy format
+        :return: number of days between curDateTime and expDateTime
+        '''
+        curDateTime = self.getDateTime()
+        expDateTime = self.getDTE()
+        return (expDateTime - curDateTime).days
+
+    #def calcOptionGainPercent(self):
+     #   """Calculate profit percentage for option
+     #   For a long option, this is 1 - (tradePrice / curPrice)
+     #   For a short option, this is 1 - (curPrice / tradePrice)
+     #   However, we let the caller handle the detail of figuring out if it's a long or short option
+     #   :return: percentage from 0 to 1 as a decimal
+     #   """
+     #   return (1 - (((self.getBidPrice() + self.getAskPrice())/2.0) / self.getTradePrice()))
