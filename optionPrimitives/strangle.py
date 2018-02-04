@@ -12,21 +12,19 @@ class Strangle(OptionPrimitive):
 
         Optional attributes:
            daysBeforeClosing:  number of days before expiration to close the trade
-           roc:  minimal return on capital for overall trade as a decimal
            profitTargetPercent:  percentage of initial credit to use when closing trade
            avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
            maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
            maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
     """
-    def __init__(self, orderQuantity, callOpt, putOpt, buyOrSell, daysBeforeClosing=None, roc=None,
-                 profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, maxMidDev=None):
+    def __init__(self, orderQuantity, callOpt, putOpt, buyOrSell, daysBeforeClosing=None, profitTargetPercent=None,
+                 avoidAssignment=None, maxBidAsk=None, maxMidDev=None):
 
         self.__numContracts = orderQuantity
         self.__putOpt = putOpt
         self.__callOpt = callOpt
         self.__buyOrSell = buyOrSell
         self.__daysBeforeClosing = daysBeforeClosing
-        self.__roc = roc
         self.__profitTargetPercent = profitTargetPercent
         self.__avoidAssignment = avoidAssignment
         self.__maxBidAsk = maxBidAsk
@@ -40,6 +38,16 @@ class Strangle(OptionPrimitive):
 
     def removePrimitive(self):
         pass
+
+    def getPutOption(self):
+        """Return the put option portion of the strangle
+        """
+        return self.__putOpt
+
+    def getCallOption(self):
+        """Return the call option portion of the strangle
+        """
+        return self.__callOpt
 
     def getDelta(self):
         """Used to get the delta for the strangle
@@ -84,6 +92,24 @@ class Strangle(OptionPrimitive):
             return (totCallGamma + totPutGamma)
         else:
             return None
+
+    def getDaysBeforeClosing(self):
+        """Used to get the number of days before closing for which we should manage / close the strangle
+        :return: Number of days
+        """
+        return self.__daysBeforeClosing
+
+    def getProfitTargetPercent(self):
+        """Get the profit target percent we require to close out a strangle if we're doing early management
+        :return: profit target percent as a deicmal (0 to 1)
+        """
+        return self.__profitTargetPercent
+
+    def getAvoidAssignmentFlag(self):
+        """In the case we want to some more complex strategy management, check to see if this flag is set
+        :return: True if flag set; False otherwise
+        """
+        return self.__avoidAssignment
 
     def calcProfitLoss(self):
         """Calculate the profit and loss for the strangle position based on option values when the trade
@@ -195,6 +221,9 @@ class Strangle(OptionPrimitive):
         # Work with put option first
         putOpt = self.__putOpt
 
+        # Get put option symbol
+        putOptSymbol = putOpt.getOptionSymbol()
+
         # Get put strike
         putStrike = putOpt.getStrikePrice()
 
@@ -207,7 +236,7 @@ class Strangle(OptionPrimitive):
         matchingPutOption = None
         for option in tickData:
             if (option.getStrikePrice() == putStrike and option.getOptionType() == 'PUT'
-                    and option.getDTE() == putExpiration):
+                    and option.getDTE() == putExpiration and option.getOptionSymbol() == putOptSymbol):
                 matchingPutOption = option
                 break
 
@@ -219,6 +248,9 @@ class Strangle(OptionPrimitive):
 
         # Work with call option
         callOpt = self.__callOpt
+
+        # Get call option symbol
+        callOptSymbol = callOpt.getOptionSymbol()
 
         # Get call strike
         callStrike = callOpt.getStrikePrice()
@@ -232,7 +264,7 @@ class Strangle(OptionPrimitive):
         matchingCallOption = None
         for option in tickData:
             if (option.getStrikePrice() == callStrike and option.getOptionType() == 'CALL'
-                    and option.getDTE() == callExpiration):
+                    and option.getDTE() == callExpiration and option.getOptionSymbol() == callOptSymbol):
                 matchingCallOption = option
                 break
 
@@ -242,3 +274,59 @@ class Strangle(OptionPrimitive):
             # Update option intrinsics
             callOpt.updateIntrinsics(matchingCallOption)
 
+    def managePosition(self):
+        """Using the criteria in the optional class attributes:
+           daysBeforeClosing:  number of days before expiration to close the trade
+           profitTargetPercent:  percentage of initial credit to use when closing trade
+           avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
+
+        :return: True if position should be removed; False otherwise
+        """
+
+        putOpt = self.__putOpt
+        callOpt = self.__callOpt
+
+        if not putOpt or not callOpt:
+            logging.warning("Could not manage position since put or call option in the strangle had a None type")
+            return False
+
+        if self.getProfitTargetPercent():
+
+            target = self.getProfitTargetPercent()
+
+            # Work with put option first
+            putOptCurPrice = (putOpt.getBidPrice() + putOpt.getAskPrice())/2.0
+            putOptTradePrice = putOpt.getTradePrice()
+
+            # Work with call option second
+            callOptCurPrice = (callOpt.getBidPrice() + callOpt.getAskPrice()) / 2.0
+            callOptTradePrice = callOpt.getTradePrice()
+
+            if self.__buyOrSell == "SELL":
+                if putOptCurPrice + callOptCurPrice <= target*(putOptTradePrice + callOptTradePrice):
+                    return True
+            else:
+                if putOptCurPrice + callOptCurPrice >= (1+target)*(putOptTradePrice + callOptTradePrice):
+                    return True
+
+        if self.getDaysBeforeClosing():
+
+            # Get the difference in time between current date / time and the option expiration date
+            daysBeforeClosing = self.getDaysBeforeClosing()
+
+            # Get difference between current date and option expiration date in days for put and call option
+            putDays = putOpt.getNumDaysLeft()
+            callDays = callOpt.getNumDaysLeft()
+
+            # If either the put option or call option has less days to expiration than the daysBeforeClosing threshold,
+            # we will return true to close out the strangle position
+            # TODO: We may want to adjust this behavior later if we'd like to be able to have a strange with a call
+            # and put option in different expirations
+            if putDays <= daysBeforeClosing or callDays <= daysBeforeClosing:
+                return True
+
+        if self.getAvoidAssignmentFlag():
+            # TODO: add this feature
+            pass
+
+        return False
