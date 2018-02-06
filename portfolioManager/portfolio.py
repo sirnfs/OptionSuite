@@ -139,6 +139,9 @@ class Portfolio(object):
         self.__PLopenPercent = 0
         self.__PLdayPercent = 0
 
+        # Array / list used to keep track of which positions we should remove after calling __managePosition
+        idxsToDelete = []
+
         # Go through all positions in portfolio and do the updates
         for idx, curPosition in enumerate(self.__positions):
             # Update the option intrinsic values
@@ -148,11 +151,17 @@ class Portfolio(object):
             self.__netLiq += curPosition.calcProfitLoss()
 
             # Determine if we should close out this position or do some type of management
-            positionClosed = self.__managePosition(curPosition, idx)
+            positionClosed = self.__managePosition(curPosition)
 
             # Update portfolio values; e.g., total delta, vega, buying power, net liq
             if not positionClosed:
                 self.__calcPortfolioValues(curPosition)
+            else:
+                idxsToDelete.append(idx)
+
+        # Go through and delete any positions which were added to the idxsToDelete array
+        for idx in idxsToDelete:
+            del(self.__positions[idx])
 
     def __calcPortfolioValues(self, curPosition):
         """Private /internal function used to update portfolio values
@@ -182,15 +191,16 @@ class Portfolio(object):
 
         # TODO:  handle PLopen, PLday, PLopenPercent PLdayPercent calculations
 
-    def __managePosition(self, curPosition, idx):
+    def __managePosition(self, curPosition):
         """Private / internal function to determine if we need to manage position (e.g., close out position or make
         adjustments)
         :param curPosition:  current position we are looking at in portfolio
-        :param idx:  index of position in portfolio
         :return: True if position was closed; False otherwise
         """
 
         # Determine if the position should be managed by calling respective option primitive managePosition() function
         if curPosition.managePosition():
-            # Remove position from portfolio
-            del(self.__positions[idx])
+            # Returning true indicates that position will be deleted
+            return True
+
+        return False

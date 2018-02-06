@@ -4,8 +4,11 @@ from optionPrimitives import strangle
 from base import put
 from base import call
 from events import signalEvent
+from events import tickEvent
 from dataHandler import csvData
 import Queue as queue
+import datetime
+import pytz
 
 class TestPortfolio(unittest.TestCase):
 
@@ -112,13 +115,145 @@ class TestPortfolio(unittest.TestCase):
         """Test that we can remove a managed position from the portfolio without affecting any of the other positions
         in the portfolio
         """
-        pass
+
+        # Create portfolio object
+        portfolioObj = portfolio.Portfolio(self.startingCapital, self.maxCapitalToUse,
+                                           self.maxCapitalToUsePerTrade)
+
+        # Add first position to the portfolio
+        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
+                         optionSymbol="01", tradePrice=7.45)
+        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
+                            optionSymbol="02", tradePrice=5.20)
+
+        # Create Strangle
+        orderQuantity = 1
+        profitTargetPercent = 0.5
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", profitTargetPercent=profitTargetPercent)
+
+        # Create signal event
+        event = signalEvent.SignalEvent()
+        event.createEvent(strangleObj)
+
+        # Create portfolio onSignal event, which adds the position to the portfolio
+        portfolioObj.onSignal(event)
+
+        # Add second position to the portfolio
+        putOpt = put.Put('AAPL', 140, 0.15, 34, underlyingPrice=150, bidPrice=5.15, askPrice=5.15,
+                         optionSymbol="03", tradePrice=5.15)
+        callOpt = call.Call('APPL', 160, -0.15, 34, underlyingPrice=150, bidPrice=3.20, askPrice=3.20,
+                            optionSymbol="04", tradePrice=3.20)
+
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", profitTargetPercent=profitTargetPercent)
+
+        # Create signal event
+        event = signalEvent.SignalEvent()
+        event.createEvent(strangleObj)
+
+        # Create portfolio onSignal event, which adds the position to the portfolio
+        portfolioObj.onSignal(event)
+
+        # Add a third position to the portfolio
+        putOpt = put.Put('SPY', 240, 0.15, 34, underlyingPrice=280, bidPrice=4.15, askPrice=4.15,
+                         optionSymbol="05", tradePrice=4.15)
+        callOpt = call.Call('SPY', 300, -0.15, 34, underlyingPrice=280, bidPrice=2.20, askPrice=2.20,
+                            optionSymbol="06", tradePrice=2.20)
+
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", profitTargetPercent=profitTargetPercent)
+
+        # Create signal event
+        event = signalEvent.SignalEvent()
+        event.createEvent(strangleObj)
+
+        # Create portfolio onSignal event, which adds the position to the portfolio
+        portfolioObj.onSignal(event)
+
+        # For the second position in the portfolio, make the option prices less than 50% of the trade price, which
+        # should cause the position to be closed / deleted from the portfolio
+        newOptionObjs = []
+        putOpt = put.Put('AAPL', 140, 0.15, 34, underlyingPrice=150, bidPrice=2.15, askPrice=2.15,
+                         optionSymbol="03")
+        newOptionObjs.append(putOpt)
+        callOpt = call.Call('APPL', 160, -0.15, 34, underlyingPrice=150, bidPrice=1.20, askPrice=1.20,
+                            optionSymbol="04")
+        newOptionObjs.append(callOpt)
+
+        newEvent = tickEvent.TickEvent()
+        newEvent.createEvent(newOptionObjs)
+        portfolioObj.updatePortfolio(newEvent)
+
+        # Check that the first position is the SPX position, and the second position is the SPY position, i.e., the
+        # AAPL position should have been managed / removed.
+        positions = portfolioObj.getPositions()
+        callPos0 = positions[0].getCallOption()
+        callPos1 = positions[1].getCallOption()
+
+        self.assertEqual(callPos0.getUnderlyingTicker(), 'SPX')
+        self.assertEqual(callPos1.getUnderlyingTicker(), 'SPY')
+        self.assertEqual(len(positions), 2)
 
     def testPortfolioWithExpirationManagement(self):
-        """Put on a strangle; update portfolio values daily, and then manage the strangle when the daysBeforeClosing
-        threshold has been met.  Output statistics at every day to view the progression
+        """Put on a strangle; update portfolio values, and then manage the strangle when the daysBeforeClosing
+        threshold has been met.
         """
-        pass
+        # Create portfolio object
+        portfolioObj = portfolio.Portfolio(self.startingCapital, self.maxCapitalToUse,
+                                           self.maxCapitalToUsePerTrade)
+
+        # Set up date / time formats
+        local = pytz.timezone('US/Eastern')
+
+        # Convert time zone of data 'US/Eastern' to UTC time
+        expDate = datetime.datetime.strptime("02/20/18", "%m/%d/%y")
+        expDate = local.localize(expDate, is_dst=None)
+        expDate = expDate.astimezone(pytz.utc)
+
+        # Convert time zone of data 'US/Eastern' to UTC time
+        curDate = datetime.datetime.strptime("02/02/18", "%m/%d/%y")
+        curDate = local.localize(curDate, is_dst=None)
+        curDate = curDate.astimezone(pytz.utc)
+
+        # Add first position to the portfolio
+        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
+                         optionSymbol="01", tradePrice=7.45, dateTime=curDate)
+        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
+                            optionSymbol="02", tradePrice=5.20, dateTime=curDate)
+
+        # Create Strangle
+        orderQuantity = 1
+        daysBeforeClosing = 5
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing)
+
+        # Create signal event
+        event = signalEvent.SignalEvent()
+        event.createEvent(strangleObj)
+
+        # Create portfolio onSignal event, which adds the position to the portfolio
+        portfolioObj.onSignal(event)
+
+        # Check that the position was added to the portfolio
+        self.assertEqual(len(portfolioObj.getPositions()), 1)
+
+        # Change the time to be within five days from the DTE, which should cause the position to be closed / deleted
+        # from the portfolio
+        curDate = datetime.datetime.strptime("02/19/18", "%m/%d/%y")
+        curDate = local.localize(curDate, is_dst=None)
+        curDate = curDate.astimezone(pytz.utc)
+
+        newOptionObjs = []
+        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
+                         optionSymbol="01", tradePrice=7.45, dateTime=curDate)
+        newOptionObjs.append(putOpt)
+        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
+                            optionSymbol="02", tradePrice=5.20, dateTime=curDate)
+        newOptionObjs.append(callOpt)
+
+        newEvent = tickEvent.TickEvent()
+        newEvent.createEvent(newOptionObjs)
+        portfolioObj.updatePortfolio(newEvent)
+
+        # Check that the position was managed / deleted from the portfolio
+        self.assertEqual(len(portfolioObj.getPositions()), 0)
 
 if __name__ == '__main__':
     unittest.main()
