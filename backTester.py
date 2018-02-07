@@ -17,31 +17,34 @@ class BackTestSession(object):
 
     def __init__(self):
 
-        #Parameters for CSV data for backtesting session
-        inputDir = './sampleData'
-        fileSource = 'aapl_sample_ivolatility.csv'
-        dataProvider = 'iVolatility'
+        # Create queue to hold events (ticks, signals, etc.)
         self.eventQueue = queue.Queue()
-        self.dataHandler = csvData.CsvData(inputDir, fileSource, dataProvider, self.eventQueue)
 
-        #Parameters for strangle strategy -- TODO: move params to file
-        optCallDelta = 16 #integers or floats?
-        maxCallDelta = 30
-        optPutDelta = 16
-        maxPutDelta = 30
+        # Create CsvData class object
+        dataProvider = 'iVolatility'
+        directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017'
+        filename = 'RawIV.csv'
+        chunkSize = 10000
+        self.dataHandler = csvData.CsvData(directory, filename, dataProvider, self.eventQueue, chunkSize)
+
+        # Parameters for strangle strategy -- TODO: move params to file
+        optCallDelta = 0.16
+        maxCallDelta = 0.30
+        optPutDelta = -0.16
+        maxPutDelta = -0.30
         startTime = datetime.now(pytz.utc)
-        buyOrSell = "SELL" # "BUY" OR "SELL"
-        underlying = 'AAPL'
+        buyOrSell = 'SELL' # 'BUY' OR 'SELL'
+        underlying = 'SPX'
         orderQuantity = 1
         daysBeforeClose = 5
         optimalDTE = 45
         minimumDTE = 25
         minCredit = 0.5
-        profitTargetPercent = 50
-        maxBidAsk = 0.05
-        minDaysToEarnings = 25
-        minDaysSinceEarnings = 3
-        minIVR = 15
+        profitTargetPercent = 0.5
+        maxBidAsk = 15 # A general rule of thumb is to take 0.001*underlyingPrice.  Set to 15 to mostly ignore field
+        minDaysToEarnings = None
+        minDaysSinceEarnings = None
+        minIVR = None
         self.strategyManager = strangleStrat.StrangleStrat(self.eventQueue, optCallDelta, maxCallDelta, optPutDelta,
                                                            maxPutDelta, startTime, buyOrSell, underlying,
                                                            orderQuantity, daysBeforeClose, optimalDTE=optimalDTE,
@@ -50,7 +53,8 @@ class BackTestSession(object):
                                                            maxBidAsk=maxBidAsk,
                                                            minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
 
-        startingCapital = 100000
+
+        startingCapital = 1000000
         maxCapitalToUse = 0.5
         maxCapitalToUsePerTrade = 0.05
         self.portfolioManager = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
@@ -79,7 +83,6 @@ def run(session):
                     #self.portfolio_handler.on_fill(event)
                 else:
                     raise NotImplemented("Unsupported event.type '%s'" % event.type)
-
 
 if __name__ == "__main__":
 

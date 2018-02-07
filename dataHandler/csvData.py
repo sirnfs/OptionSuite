@@ -2,6 +2,7 @@ import pandas as pd
 import datetime
 import pytz
 import sys
+import logging
 from dataHandler import DataHandler
 from base import call
 from base import put
@@ -220,13 +221,24 @@ class CsvData(DataHandler):
             try:
                 local = pytz.timezone('US/Eastern')
                 #Convert time zone of data 'US/Eastern' to UTC time
-                DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%y")
+                # Try and except here to handle two or four digit year format
+                try:
+                    DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%y")
+                except:
+                    DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%Y")
+
                 DTE = local.localize(DTE, is_dst=None)
                 DTE = DTE.astimezone(pytz.utc)
-                curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%y")
+
+                try:
+                    curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%y")
+                except:
+                    curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%Y")
+
                 curDateTime = local.localize(curDateTime, is_dst=None)
                 curDateTime = curDateTime.astimezone(pytz.utc)
             except:
+                logging.warning('Something went wrong when trying to read the option data from the CSV')
                 return None
 
             call_put = inputData['call/put']

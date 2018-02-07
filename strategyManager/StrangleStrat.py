@@ -209,7 +209,7 @@ class StrangleStrat(strategy.Strategy):
             # self._f.flush()
             # We create a strangle option primitive; the strangle primitive will have several of the
             # arguments from the init of StrangleStrat class
-            strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt, "SELL",
+            strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt, 'SELL',
                                             self.getDaysBeforeClose(), self.getProfitTargetPercent(),
                                             self.getAvoidAssignmentFlag(), self.getMaxBidAsk(), self.getMaxMidDev())
 
