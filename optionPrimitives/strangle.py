@@ -39,6 +39,11 @@ class Strangle(OptionPrimitive):
     def removePrimitive(self):
         pass
 
+    def getUnderlyingTicker(self):
+        """Get the name (string) of the underlying being used for the strangle
+        """
+        return self.__putOpt.getUnderlyingTicker()
+
     def getPutOption(self):
         """Return the put option portion of the strangle
         """

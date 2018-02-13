@@ -21,6 +21,11 @@ class NakedPut(OptionPrimitive):
     def removePrimitive(self):
         pass
 
+    def getUnderlyingTicker(self):
+        """Get the name (string) of the underlying being used for the naked put
+        """
+        pass
+
     def getDelta(self):
         """Used to get the delta for the strangle
         """

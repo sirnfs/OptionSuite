@@ -95,6 +95,15 @@ class TestStrangleStrategy(unittest.TestCase):
 
         self.assertEqual(hasMin, True)
 
+    def testIsMonthlyExp(self):
+        local = pytz.timezone('US/Eastern')
+        expDateTime = datetime.strptime("12/16/11", "%m/%d/%y")
+        expDateTime = local.localize(expDateTime, is_dst=None)
+        expDateTime = expDateTime.astimezone(pytz.utc)
+
+        isMonthly = self.curStrategy.isMonthlyExp(expDateTime)
+        self.assertTrue(isMonthly)
+
     # def testFileWrite(self):
     #     f = open('fileWriteTest.txt', 'w')
     #     f.write("Date / Time")

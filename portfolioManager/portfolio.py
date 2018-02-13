@@ -11,6 +11,7 @@ class Portfolio(object):
        maxCapitalToUsePerTrade -- max percent of portfolio to use on one trade (same underlying), 0 to 1
 
        Portfolio intrinsics:
+       realizedCapital:  updated when positions are actually closed
        netLiq:  net liquidity of total portfolio (ideally includes commissions, fees, etc.)
        totBuyingPower:  total buying power being used in portfolio
        PLopen:  current value of open positions in dollars (positive or negative)
@@ -33,6 +34,7 @@ class Portfolio(object):
         self.__maxCapitalToUsePerTrade = maxCapitalToUsePerTrade
 
         # Overall portfolio intrinsics
+        self.__realizedCapital = startingCapital
         self.__netLiq = startingCapital
         self.__totBuyingPower = 0
         self.__PLopen = 0
@@ -81,9 +83,18 @@ class Portfolio(object):
         # Get the data from the tick event
         eventData = event.getData()
 
+        # Return if there's no data
+        if not eventData:
+            return
+
         # Determine if the eventData meets the portfolio risk management -- this will eventually be moved to
         # a separate risk management module
         tradeCapReq = eventData.getBuyingPower()
+
+        # Check if we already have this underlying in the portfolio; if so, return.
+        # TODO: need a better way to do this; enable / disable from the portfolio initialization
+        if self.__underlyingExists(eventData):
+            return
 
         # If we have not used too much total buying power in the portfolio, and the current trade is using less
         # than the maximum allowed per trade, we add the position to the portfolio
@@ -110,7 +121,7 @@ class Portfolio(object):
             else:
                 logging.warning("No vega values were found in the option primitive")
         else:
-            if self.__totBuyingPower < self.__netLiq * self.__maxCapitalToUse:
+            if self.__totBuyingPower >= self.__netLiq * self.__maxCapitalToUse:
                 logging.info("Not enough buying power available based on maxCapitalToUse threshold")
             else:
                 logging.info("Trade uses too much buying power based on maxCapitalToUsePerTrade threshold")
@@ -125,6 +136,10 @@ class Portfolio(object):
         # Get the data from the tick event
         tickData = event.getData()
 
+        # If we did not get any tick data or there are not positions in the portfolio, return
+        if not tickData or not self.__positions:
+            return
+
         # Go through the positions currently in the portfolio and update the prices
         # Reset the delta, gamma, theta, and vega values for the entire portfolio
         self.__totDelta = 0
@@ -133,6 +148,8 @@ class Portfolio(object):
         self.__totTheta = 0
         # Reset the total buying power for the portfolio, which will be recalculated
         self.__totBuyingPower = 0
+        # Reset the netLiq
+        self.__netLiq = 0
         # Reset the PLopen, PLday, PLopenPercent PLdayPercent
         self.__PLopen = 0
         self.__PLday = 0
@@ -147,21 +164,38 @@ class Portfolio(object):
             # Update the option intrinsic values
             curPosition.updateValues(tickData)
 
-            # Update net liq
-            self.__netLiq += curPosition.calcProfitLoss()
-
             # Determine if we should close out this position or do some type of management
             positionClosed = self.__managePosition(curPosition)
 
             # Update portfolio values; e.g., total delta, vega, buying power, net liq
             if not positionClosed:
                 self.__calcPortfolioValues(curPosition)
+                self.__netLiq += curPosition.calcProfitLoss()
             else:
                 idxsToDelete.append(idx)
 
+        # Add the realized capital to the profit / loss of all open positions to get final net liq
+        self.__netLiq += self.__realizedCapital
+        #print("Net liq: ${}").format(self.__netLiq)
+        logging.info("Net liq: %f", self.__netLiq)
+
         # Go through and delete any positions which were added to the idxsToDelete array
         for idx in idxsToDelete:
+            #print("The {} position was closed").format(self.__positions[idx].getUnderlyingTicker())
+            logging.info('The %s position was closed', self.__positions[idx].getUnderlyingTicker())
             del(self.__positions[idx])
+
+    def __underlyingExists(self, position):
+        """Check if the underlying we're trying to add to the portfolio already exists
+        :param: position:  position we're trying to add to the portfolio
+        :return: True if there the underlying is already in the portfolio; False otherwise.
+        """
+        for curPosition in self.__positions:
+            if curPosition.getUnderlyingTicker() == position.getUnderlyingTicker():
+                logging.warning('Tried to add a position to the portfolio that already exists')
+                return True
+
+        return False
 
     def __calcPortfolioValues(self, curPosition):
         """Private /internal function used to update portfolio values
@@ -200,6 +234,10 @@ class Portfolio(object):
 
         # Determine if the position should be managed by calling respective option primitive managePosition() function
         if curPosition.managePosition():
+
+            # Update realized capital
+            self.__realizedCapital += curPosition.calcProfitLoss()
+
             # Returning true indicates that position will be deleted
             return True
 

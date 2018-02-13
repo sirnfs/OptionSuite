@@ -236,7 +236,7 @@ class StrangleStrat(strategy.Strategy):
         '''
         Check if the option expiration falls on the third Friday of the month, or if the third Friday is a holiday,
         check if the expiration falls on the Thursday that preceeds it
-        Technically, the option expire on a Saturday, so we need to subtract a day from the date and check if the day
+        Technically, the option expires on a Saturday, so we need to subtract a day from the date and check if the day
         is the third friday of the month
         :param dateTime: option expiration date in mm/dd/yy format
         :return: true if it's a monthly option; false otherwise
