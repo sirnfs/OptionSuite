@@ -159,11 +159,14 @@ class CsvData(DataHandler):
         if self.__dataAvailable:
 
             #Get option chain and create event
-            self.getOptionChain()
+            if self.getOptionChain():
+                return True
+            else:
+                return False
 
         else:
             #No event will be created, so nothing to do here.
-            pass
+            return False
 
     def getCSVDir(self):
         """

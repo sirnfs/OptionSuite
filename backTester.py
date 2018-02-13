@@ -36,27 +36,28 @@ class BackTestSession(object):
         buyOrSell = 'SELL' # 'BUY' OR 'SELL'
         underlying = 'SPX'
         orderQuantity = 1
+        expCycle = 'm' # monthly expiration
         daysBeforeClose = 5
         optimalDTE = 45
         minimumDTE = 25
         minCredit = 0.5
-        profitTargetPercent = 0.5
+        profitTargetPercent = None #0.5 # close out strangle when at least 50% of initial credit has been collected
         maxBidAsk = 15 # A general rule of thumb is to take 0.001*underlyingPrice.  Set to 15 to mostly ignore field
         minDaysToEarnings = None
         minDaysSinceEarnings = None
         minIVR = None
         self.strategyManager = strangleStrat.StrangleStrat(self.eventQueue, optCallDelta, maxCallDelta, optPutDelta,
                                                            maxPutDelta, startTime, buyOrSell, underlying,
-                                                           orderQuantity, daysBeforeClose, optimalDTE=optimalDTE,
-                                                           minimumDTE=minimumDTE, minDaysToEarnings=minDaysToEarnings,
-                                                           minCredit=minCredit, profitTargetPercent=profitTargetPercent,
-                                                           maxBidAsk=maxBidAsk,
+                                                           orderQuantity, daysBeforeClose, expCycle=expCycle,
+                                                           optimalDTE=optimalDTE, minimumDTE=minimumDTE,
+                                                           minDaysToEarnings=minDaysToEarnings, minCredit=minCredit,
+                                                           profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
                                                            minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
 
 
         startingCapital = 1000000
-        maxCapitalToUse = 0.5
-        maxCapitalToUsePerTrade = 0.05
+        maxCapitalToUse = 0.5 # Up to 50% of net liq can be used in trades
+        maxCapitalToUsePerTrade = 0.10 # 10% max capital to use per trade
         self.portfolioManager = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
 
 def run(session):
@@ -66,7 +67,9 @@ def run(session):
             event = session.eventQueue.get(False)
         except queue.Empty:
             #Get data for tick event
-            session.dataHandler.getNextTick()
+            if not session.dataHandler.getNextTick():
+                # Get out of inifinite while loop; no more data available
+                break
         else:
             if event is not None:
                 if event.type == 'TICK':

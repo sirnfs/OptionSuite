@@ -10,6 +10,12 @@ class OptionPrimitive(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def getUnderlyingTicker(self):
+        """Get the name (string) of the underlying being used for the option primtive
+        """
+        pass
+
+    @abstractmethod
     def getBuyingPower(self):
         """Used to calculate the buying power needed for the
         option primitive

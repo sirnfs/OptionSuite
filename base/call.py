@@ -1,4 +1,5 @@
 import option
+import logging
 
 class Call(option.Option):
     """This class defines a CALL option, which inherits from the Option class"""
@@ -31,3 +32,9 @@ class Call(option.Option):
         self.setRho(newOpt.getRho())
         self.setVega(newOpt.getVega())
         self.setImpliedVol(newOpt.getImpliedVol())
+
+        # Some debugging prints
+        #print('Date / time is {}').format(self.getDateTime())
+        #print('Option DTE is {}').format(self.getDTE())
+        logging.info('Date / time: %s', self.getDateTime())
+        logging.info('DTE: %s', self.getDTE())
