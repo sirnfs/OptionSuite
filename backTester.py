@@ -22,8 +22,8 @@ class BackTestSession(object):
 
         # Create CsvData class object
         dataProvider = 'iVolatility'
-        directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017'
-        filename = 'RawIV.csv'
+        directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX'#/SPX_2011_2017'
+        filename = 'combinedCSV.csv'#''RawIV.csv'
         chunkSize = 10000
         self.dataHandler = csvData.CsvData(directory, filename, dataProvider, self.eventQueue, chunkSize)
 
@@ -41,7 +41,8 @@ class BackTestSession(object):
         optimalDTE = 45
         minimumDTE = 25
         minCredit = 0.5
-        profitTargetPercent = None #0.5 # close out strangle when at least 50% of initial credit has been collected
+        profitTargetPercent = 0.5 # close out strangle when at least 50% of initial credit has been collected
+        customManagement = False #Use special strategy to
         maxBidAsk = 15 # A general rule of thumb is to take 0.001*underlyingPrice.  Set to 15 to mostly ignore field
         minDaysToEarnings = None
         minDaysSinceEarnings = None
@@ -51,7 +52,8 @@ class BackTestSession(object):
                                                            orderQuantity, daysBeforeClose, expCycle=expCycle,
                                                            optimalDTE=optimalDTE, minimumDTE=minimumDTE,
                                                            minDaysToEarnings=minDaysToEarnings, minCredit=minCredit,
-                                                           profitTargetPercent=profitTargetPercent, maxBidAsk=maxBidAsk,
+                                                           profitTargetPercent=profitTargetPercent,
+                                                           customManagement=customManagement, maxBidAsk=maxBidAsk,
                                                            minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
 
 

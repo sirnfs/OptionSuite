@@ -19,7 +19,7 @@ class Strategy(object):
          minDaysToEarnings:  minimum number of days to put on trade before earnings
          minCredit:  minimum credit to collect on overall trade
          profitTargetPercent:  percentage of initial credit to use when closing trade
-         avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
+         customManagement:  boolean -- manages trade using custom rules
          maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
          maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
          minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy
@@ -28,7 +28,7 @@ class Strategy(object):
 
      def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, expCycle=None,
                   optimalDTE=None, minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None,
-                  profitTargetPercent=None, avoidAssignment=None, maxBidAsk=None, maxMidDev=None,
+                  profitTargetPercent=None, customManagement=None, maxBidAsk=None, maxMidDev=None,
                   minDaysSinceEarnings=None, minIVR=None):
 
          """Inits Strategy class with constructor data.  We check to make sure that
@@ -51,7 +51,7 @@ class Strategy(object):
          self.__minDaysToEarnings = minDaysToEarnings
          self.__minCredit = minCredit
          self.__profitTargetPercent = profitTargetPercent
-         self.__avoidAssignment = avoidAssignment
+         self.__customManagement = customManagement
          self.__maxBidAsk = maxBidAsk
          self.__maxMidDev = maxMidDev
          self.__minDaysSinceEarnings = minDaysSinceEarnings
@@ -96,8 +96,8 @@ class Strategy(object):
      def getProfitTargetPercent(self):
          return self.__profitTargetPercent
 
-     def getAvoidAssignmentFlag(self):
-         return self.__avoidAssignment
+     def getCustomManagementFlag(self):
+         return self.__customManagement
 
      def getMaxBidAsk(self):
          return self.__maxBidAsk
