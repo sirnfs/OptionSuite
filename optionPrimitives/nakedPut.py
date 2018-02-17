@@ -54,6 +54,16 @@ class NakedPut(OptionPrimitive):
         """
         pass
 
+    def calcProfitLossPercentage(self):
+        """Calculate the profit and loss for the naked put position based on option values when the trade
+        was placed and new option values.  Note that profit and loss are reversed if we buy or sell a put;
+        if we buy a put, we want the option value to increase; if we sell a put, we want the option value
+        to decrease.
+
+        :return: profit / loss as a percentage of the initial option price.  Returns negative percentage for a loss
+        """
+        pass
+
     def getNumContracts(self):
         """This function returns the number of contracts for the overall
         primitive, and it should not confused with the number of option 

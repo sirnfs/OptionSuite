@@ -108,11 +108,74 @@ class TestStrangle(unittest.TestCase):
 
         daysBeforeClosing = 5
         orderQuantity = 1
-        stangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing)
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing)
 
         # Check if managePosition() returns true since the current dateTime and DTE are less than daysBeforeClosing = 5
-        self.assertTrue(stangleObj.managePosition())
+        self.assertTrue(strangleObj.managePosition())
 
+    def testStrangleCalcProfitLossPercentage(self):
+
+        # Set up date / time formats
+        local = pytz.timezone('US/Eastern')
+
+        # Convert time zone of data 'US/Eastern' to UTC time
+        expDate = datetime.datetime.strptime("02/05/18", "%m/%d/%y")
+        expDate = local.localize(expDate, is_dst=None)
+        expDate = expDate.astimezone(pytz.utc)
+
+        # Convert time zone of data 'US/Eastern' to UTC time
+        curDate = datetime.datetime.strptime("02/02/18", "%m/%d/%y")
+        curDate = local.localize(curDate, is_dst=None)
+        curDate = curDate.astimezone(pytz.utc)
+
+        # Test the case where we sell a strangle and have a loss
+        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=6.00, askPrice=6.00,
+                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
+        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=4.00, askPrice=4.00,
+                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
+
+        orderQuantity = 1
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL")
+
+        # Total credit = 5.00 or 500, and total loss is -300 + -200 = -500; (-500/500) * 100 = -100%
+        profitLossPercentage = strangleObj.calcProfitLossPercentage()
+        self.assertAlmostEqual(profitLossPercentage, -100)
+
+        # Test the case where we sell a strangle and have a profit
+        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=1.50, askPrice=1.50,
+                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
+        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=1.00, askPrice=1.00,
+                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
+
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL")
+
+        # Total credit = 5.00 or 500, and total profit is 150 + 100 = 250; 250/500 = 0.5 * 100 = 50%
+        profitLossPercentage = strangleObj.calcProfitLossPercentage()
+        self.assertAlmostEqual(profitLossPercentage, 50)
+
+        # Test the case where we buy a strangle and have a loss
+        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=1.50, askPrice=1.50,
+                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
+        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=1.00, askPrice=1.00,
+                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
+
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "BUY")
+
+        # Total debit = 5.00 or 500, and total loss is -150 + -100 = -250 / 500 = -0.5* 100 = -50%
+        profitLossPercentage = strangleObj.calcProfitLossPercentage()
+        self.assertAlmostEqual(profitLossPercentage, -50)
+
+        # Test the case where we buy a strangle and have a profit
+        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=6.00, askPrice=6.00,
+                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
+        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=4.00, askPrice=4.00,
+                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
+
+        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "BUY")
+
+        # Total debit = 5.00 or 500, and total profit is 300 + 200 = 500 / 500 = 1 * 100 = 100%
+        profitLossPercentage = strangleObj.calcProfitLossPercentage()
+        self.assertAlmostEqual(profitLossPercentage, 100)
 
 if __name__ == '__main__':
     unittest.main()

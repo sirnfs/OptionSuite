@@ -13,12 +13,12 @@ class Strangle(OptionPrimitive):
         Optional attributes:
            daysBeforeClosing:  number of days before expiration to close the trade
            profitTargetPercent:  percentage of initial credit to use when closing trade
-           avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
+           customManagement:  boolean -- manages trade using custom strategy
            maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
            maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
     """
     def __init__(self, orderQuantity, callOpt, putOpt, buyOrSell, daysBeforeClosing=None, profitTargetPercent=None,
-                 avoidAssignment=None, maxBidAsk=None, maxMidDev=None):
+                 customManagement=None, maxBidAsk=None, maxMidDev=None):
 
         self.__numContracts = orderQuantity
         self.__putOpt = putOpt
@@ -26,9 +26,13 @@ class Strangle(OptionPrimitive):
         self.__buyOrSell = buyOrSell
         self.__daysBeforeClosing = daysBeforeClosing
         self.__profitTargetPercent = profitTargetPercent
-        self.__avoidAssignment = avoidAssignment
+        self.__customManagement = customManagement
         self.__maxBidAsk = maxBidAsk
         self.__maxMidDev = maxMidDev
+
+        # If there is an error reading the CSV data, e.g., if the option chain isn't being updated, we need to
+        # delete the strangle position from the portfolio
+        self.__forceClose = False
 
         # TODO?? Should we do this?  if orderQuantity > 1, duplicate call and put options; we'd like to have
         # orderQuantity number of calls and puts
@@ -110,11 +114,11 @@ class Strangle(OptionPrimitive):
         """
         return self.__profitTargetPercent
 
-    def getAvoidAssignmentFlag(self):
+    def getCustomManagementFlag(self):
         """In the case we want to some more complex strategy management, check to see if this flag is set
         :return: True if flag set; False otherwise
         """
-        return self.__avoidAssignment
+        return self.__customManagement
 
     def calcProfitLoss(self):
         """Calculate the profit and loss for the strangle position based on option values when the trade
@@ -144,6 +148,45 @@ class Strangle(OptionPrimitive):
         totProfitLoss = (putProfitLoss + callProfitLoss) * self.__numContracts
 
         return totProfitLoss
+
+    def calcProfitLossPercentage(self):
+        """Calculate the profit and loss for the strangle position based on option values when the trade
+        was placed and new option values.  Note that profit and loss are reversed if we buy or sell a put/call;
+        if we buy a put/call, we want the option value to increase; if we sell a put/call, we want the option value
+        to decrease.
+
+        :return: profit / loss as a percentage of the initial option prices.  Returns negative percentage for a loss
+        """
+
+        # Handle profit / loss for put first
+        putOpt = self.__putOpt
+        putProfitLoss = putOpt.calcOptionPriceDiff()
+
+        # If we're buying the strangle, we will have a loss if the put option decreases in value
+        if self.__buyOrSell == "BUY":
+            putProfitLoss = -putProfitLoss
+
+        # Handle profit /loss for call second
+        callOpt = self.__callOpt
+        callProfitLoss = callOpt.calcOptionPriceDiff()
+
+        if self.__buyOrSell == "BUY":
+            callProfitLoss = -callProfitLoss
+
+        # Add the profit / loss of put and call
+        totProfitLoss = putProfitLoss + callProfitLoss
+
+        # Get the initial credit or debit paid for selling or buying the strangle, respectively
+        callCreditDebit = callOpt.getTradePrice()
+        putCreditDebit = putOpt.getTradePrice()
+        totCreditDebit = (callCreditDebit + putCreditDebit) * 100
+
+        # Express totProfitLoss as a percentage
+        # 5.00 -> 2.50 when selling strangle, profit / loss = (5 - 2.50) / 5 = 2.5/5 = 0.5 * 100 = 50
+        # 5.00 -> 10.00 when buying strangle, profit / loss = -(5 - 10) / 5 = 1 * 100 = 100
+        percentProfitLoss = (totProfitLoss / totCreditDebit) * 100
+
+        return percentProfitLoss
 
     def getNumContracts(self):
         """This function returns the number of contracts for the overall
@@ -247,6 +290,8 @@ class Strangle(OptionPrimitive):
 
         if not matchingPutOption:
             logging.warning("No matching PUT was found in the option chain for the strangle")
+            # Can't update the position we have on; need to exit strangle trade
+            self.__forceClose = True
         else:
             # Update option intrinsics
             putOpt.updateIntrinsics(matchingPutOption)
@@ -275,6 +320,8 @@ class Strangle(OptionPrimitive):
 
         if not matchingCallOption:
             logging.warning("No matching CALL was found in the option chain for the strangle")
+            # Can't update the position we have on; need to exit strangle trade
+            self.__forceClose = True
         else:
             # Update option intrinsics
             callOpt.updateIntrinsics(matchingCallOption)
@@ -283,7 +330,7 @@ class Strangle(OptionPrimitive):
         """Using the criteria in the optional class attributes:
            daysBeforeClosing:  number of days before expiration to close the trade
            profitTargetPercent:  percentage of initial credit to use when closing trade
-           avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
+           customManagement:  boolean -- manages trade using defined rules
 
         :return: True if position should be removed; False otherwise
         """
@@ -294,6 +341,13 @@ class Strangle(OptionPrimitive):
         if not putOpt or not callOpt:
             logging.warning("Could not manage position since put or call option in the strangle had a None type")
             return False
+
+        # If we weren't able to update the current position since there was no matching tick data, we need to exit
+        # the trade
+        if self.__forceClose:
+            # Reset the forceClose attribute
+            self.__forceClose = False
+            return True
 
         if self.getProfitTargetPercent():
 
@@ -316,6 +370,7 @@ class Strangle(OptionPrimitive):
 
         if self.getDaysBeforeClosing():
 
+            # If the put and call options are empty,
             # Get the difference in time between current date / time and the option expiration date
             daysBeforeClosing = self.getDaysBeforeClosing()
 
@@ -330,8 +385,9 @@ class Strangle(OptionPrimitive):
             if putDays <= daysBeforeClosing or callDays <= daysBeforeClosing:
                 return True
 
-        if self.getAvoidAssignmentFlag():
-            # TODO: add this feature
-            pass
+        if self.getCustomManagementFlag():
+
+            if self.calcProfitLossPercentage() <= -400:
+                return True
 
         return False

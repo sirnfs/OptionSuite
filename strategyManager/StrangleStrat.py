@@ -30,7 +30,7 @@ class StrangleStrat(strategy.Strategy):
             minDaysToEarnings:  minimum number of days to put on trade before earnings
             minCredit:  minimum credit to collect on overall trade
             profitTargetPercent:  percentage of initial credit to use when closing trade
-            avoidAssignment:  boolean -- closes out trade using defined rules to avoid stock assignment
+            customManagement:  boolean -- uses custom strategy to manage trade
             maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
             maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
             minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy
@@ -40,7 +40,7 @@ class StrangleStrat(strategy.Strategy):
     def __init__(self, eventQueue, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
                  underlying, orderQuantity, daysBeforeClose, expCycle=None, optimalDTE=None,
                  minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, profitTargetPercent=None,
-                 avoidAssignment=None, maxBidAsk=None, maxMidDev=None, minDaysSinceEarnings=None, minIVR=None):
+                 customManagement=None, maxBidAsk=None, maxMidDev=None, minDaysSinceEarnings=None, minIVR=None):
 
         #For arguments that are not supported or don't have implementations, we return an exception to prevent confusion
         if not roc == None:
@@ -49,8 +49,8 @@ class StrangleStrat(strategy.Strategy):
         if not minDaysToEarnings == None or not minDaysSinceEarnings == None:
             raise NotImplementedError, "Ability to filter out dates with respect to earnings currently not supported"
 
-        if not avoidAssignment == None:
-            raise NotImplementedError, "Strategy for avoiding assignment currently not implemented / supported"
+        #if not customManagement == None:
+        #    raise NotImplementedError, "Strategy for custom management not implemented / supported"
 
         if not minIVR == None:
             raise NotImplementedError, "Specifying implied volatility rank currently not implemented / supported"
@@ -64,7 +64,7 @@ class StrangleStrat(strategy.Strategy):
 
         strategy.Strategy.__init__(self, startTime, self.__strategy, buyOrSell, underlying, orderQuantity,
                                    daysBeforeClose, expCycle, optimalDTE, minimumDTE, roc, minDaysToEarnings,
-                                   minCredit, profitTargetPercent, avoidAssignment, maxBidAsk, maxMidDev,
+                                   minCredit, profitTargetPercent, customManagement, maxBidAsk, maxMidDev,
                                    minDaysSinceEarnings, minIVR)
 
         # For debugging open file
@@ -211,7 +211,7 @@ class StrangleStrat(strategy.Strategy):
             # arguments from the init of StrangleStrat class
             strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt, 'SELL',
                                             self.getDaysBeforeClose(), self.getProfitTargetPercent(),
-                                            self.getAvoidAssignmentFlag(), self.getMaxBidAsk(), self.getMaxMidDev())
+                                            self.getCustomManagementFlag(), self.getMaxBidAsk(), self.getMaxMidDev())
 
             # Create signal event to put on strangle strategy and add to queue
             event = signalEvent.SignalEvent()
