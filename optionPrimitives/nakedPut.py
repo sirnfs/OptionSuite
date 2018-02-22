@@ -103,5 +103,6 @@ class NakedPut(OptionPrimitive):
     def updateValues(self, tickData):
         """Based on the latest pricing data, update the option values for the naked put
         :param tickData: option chain with pricing information (puts, calls)
+         :return True if we were able to update values, false otherwise.
         """
         pass

@@ -35,12 +35,16 @@ class StrangleStrat(strategy.Strategy):
             maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
             minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy
             minIVR:  minimum implied volatility rank needed to put on strategy
+            minBuyingPower:  minimum investment we want for the strategy -- since prices vary greatly over a range like
+                             1990 to 2017, we would like to have the same amount of money in the market at any given
+                             time, so we increase the number of contracts to reach this minBuyingPower
     """
 
     def __init__(self, eventQueue, optCallDelta, maxCallDelta, optPutDelta, maxPutDelta, startTime, buyOrSell,
                  underlying, orderQuantity, daysBeforeClose, expCycle=None, optimalDTE=None,
                  minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None, profitTargetPercent=None,
-                 customManagement=None, maxBidAsk=None, maxMidDev=None, minDaysSinceEarnings=None, minIVR=None):
+                 customManagement=None, maxBidAsk=None, maxMidDev=None, minDaysSinceEarnings=None, minIVR=None,
+                 minBuyingPower=None):
 
         #For arguments that are not supported or don't have implementations, we return an exception to prevent confusion
         if not roc == None:
@@ -65,7 +69,7 @@ class StrangleStrat(strategy.Strategy):
         strategy.Strategy.__init__(self, startTime, self.__strategy, buyOrSell, underlying, orderQuantity,
                                    daysBeforeClose, expCycle, optimalDTE, minimumDTE, roc, minDaysToEarnings,
                                    minCredit, profitTargetPercent, customManagement, maxBidAsk, maxMidDev,
-                                   minDaysSinceEarnings, minIVR)
+                                   minDaysSinceEarnings, minIVR, minBuyingPower)
 
         # For debugging open file
         #self._f = open('stranglesCreated', 'w')
@@ -84,6 +88,9 @@ class StrangleStrat(strategy.Strategy):
 
     def checkForSignal(self, event):
         """Criteria that we need to check before generating a signal event:
+
+        Params:
+        event - tick data we parse through to determine if we want to create a strangle for the strategy
 
         Required:
         optCallDelta:  optimal delta for call, usually around 16 delta
@@ -212,6 +219,15 @@ class StrangleStrat(strategy.Strategy):
             strangleObj = strangle.Strangle(self.getOrderQuantity(), optimalCallOpt, optimalPutOpt, 'SELL',
                                             self.getDaysBeforeClose(), self.getProfitTargetPercent(),
                                             self.getCustomManagementFlag(), self.getMaxBidAsk(), self.getMaxMidDev())
+
+            # If we are requiring that we always have the same amount of money invested regardless of time frame,
+            # then we may need to increase the number of strangles to meet this minBuyingPower requirement.
+            minBuyingPower = self.getMinBuyingPower()
+            if minBuyingPower:
+                buyingPowerUsed = strangleObj.getBuyingPower()
+                # Require at least one contract; too much buying power will be rejected in the portfolio class
+                numContractsToAdd = max(1, int(minBuyingPower / buyingPowerUsed))
+                strangleObj.setNumContracts(numContractsToAdd)
 
             # Create signal event to put on strangle strategy and add to queue
             event = signalEvent.SignalEvent()

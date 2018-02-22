@@ -171,11 +171,23 @@ class TestPortfolio(unittest.TestCase):
         # For the second position in the portfolio, make the option prices less than 50% of the trade price, which
         # should cause the position to be closed / deleted from the portfolio
         newOptionObjs = []
+        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
+                         optionSymbol="01", tradePrice=7.45)
+        newOptionObjs.append(putOpt)
+        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
+                            optionSymbol="02", tradePrice=5.20)
+        newOptionObjs.append(callOpt)
         putOpt = put.Put('AAPL', 140, 0.15, 34, underlyingPrice=150, bidPrice=2.15, askPrice=2.15,
                          optionSymbol="03")
         newOptionObjs.append(putOpt)
         callOpt = call.Call('APPL', 160, -0.15, 34, underlyingPrice=150, bidPrice=1.20, askPrice=1.20,
                             optionSymbol="04")
+        newOptionObjs.append(callOpt)
+        putOpt = put.Put('SPY', 240, 0.15, 34, underlyingPrice=280, bidPrice=4.15, askPrice=4.15,
+                         optionSymbol="05", tradePrice=4.15)
+        newOptionObjs.append(putOpt)
+        callOpt = call.Call('SPY', 300, -0.15, 34, underlyingPrice=280, bidPrice=2.20, askPrice=2.20,
+                            optionSymbol="06", tradePrice=2.20)
         newOptionObjs.append(callOpt)
 
         newEvent = tickEvent.TickEvent()

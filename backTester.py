@@ -42,11 +42,17 @@ class BackTestSession(object):
         minimumDTE = 25
         minCredit = 0.5
         profitTargetPercent = 0.5 # close out strangle when at least 50% of initial credit has been collected
-        customManagement = False #Use special strategy to
+        customManagement = False # Use special strategy to manage trade
         maxBidAsk = 15 # A general rule of thumb is to take 0.001*underlyingPrice.  Set to 15 to mostly ignore field
         minDaysToEarnings = None
         minDaysSinceEarnings = None
         minIVR = None
+        startingCapital = 1000000
+        maxCapitalToUse = 0.5  # Up to 50% of net liq can be used in trades
+        self.maxCapitalToUsePerTrade = 0.10  # 10% max capital to use per trade / strategy
+        self.minBuyingPower = self.maxCapitalToUsePerTrade*startingCapital # Forced amount of capital to have in market
+                                                                            # on one trade / strat (optional parameter)
+
         self.strategyManager = strangleStrat.StrangleStrat(self.eventQueue, optCallDelta, maxCallDelta, optPutDelta,
                                                            maxPutDelta, startTime, buyOrSell, underlying,
                                                            orderQuantity, daysBeforeClose, expCycle=expCycle,
@@ -54,13 +60,10 @@ class BackTestSession(object):
                                                            minDaysToEarnings=minDaysToEarnings, minCredit=minCredit,
                                                            profitTargetPercent=profitTargetPercent,
                                                            customManagement=customManagement, maxBidAsk=maxBidAsk,
-                                                           minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR)
+                                                           minDaysSinceEarnings=minDaysSinceEarnings, minIVR=minIVR,
+                                                           minBuyingPower=self.minBuyingPower)
 
-
-        startingCapital = 1000000
-        maxCapitalToUse = 0.5 # Up to 50% of net liq can be used in trades
-        maxCapitalToUsePerTrade = 0.10 # 10% max capital to use per trade
-        self.portfolioManager = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
+        self.portfolioManager = portfolio.Portfolio(startingCapital, maxCapitalToUse, self.maxCapitalToUsePerTrade)
 
 def run(session):
 
@@ -77,7 +80,11 @@ def run(session):
                 if event.type == 'TICK':
                     #self.cur_time = event.time
                     session.strategyManager.checkForSignal(event)
-                    session.portfolioManager.updatePortfolio(event)
+                    netLiq = session.portfolioManager.updatePortfolio(event)
+                    # Update the buying power that can now be used for the strategy, but only if minBuyingPower is not
+                    # set to None
+                    if session.minBuyingPower:
+                        session.strategyManager.setMinBuyingPower(session.maxCapitalToUsePerTrade*netLiq)
                 elif event.type == 'SIGNAL':
                     session.portfolioManager.onSignal(event)
                 elif event.type == 'ORDER':

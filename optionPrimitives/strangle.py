@@ -120,6 +120,9 @@ class Strangle(OptionPrimitive):
         """
         return self.__customManagement
 
+    def setNumContracts(self, numContracts):
+        self.__numContracts = numContracts
+
     def calcProfitLoss(self):
         """Calculate the profit and loss for the strangle position based on option values when the trade
         was placed and new option values.  Note that profit and loss are reversed if we buy or sell a put/call;
@@ -263,9 +266,9 @@ class Strangle(OptionPrimitive):
     def updateValues(self, tickData):
         """Based on the latest pricing data, update the option values for the strangle
         :param tickData: option chain with pricing information (puts, calls)
+        :return True if we were able to update values, false otherwise.
         """
 
-        # TODO:  can we do this search faster?
         # Work with put option first
         putOpt = self.__putOpt
 
@@ -281,6 +284,7 @@ class Strangle(OptionPrimitive):
         # Go through the tickData to find the PUT option with a strike price that matches the putStrike above
         # Note that this should not return more than one option since we specify the strike price, expiration, and
         # the option type (PUT)
+        # TODO:  can we do this search faster?
         matchingPutOption = None
         for option in tickData:
             if (option.getStrikePrice() == putStrike and option.getOptionType() == 'PUT'
@@ -290,11 +294,6 @@ class Strangle(OptionPrimitive):
 
         if not matchingPutOption:
             logging.warning("No matching PUT was found in the option chain for the strangle")
-            # Can't update the position we have on; need to exit strangle trade
-            self.__forceClose = True
-        else:
-            # Update option intrinsics
-            putOpt.updateIntrinsics(matchingPutOption)
 
         # Work with call option
         callOpt = self.__callOpt
@@ -320,11 +319,17 @@ class Strangle(OptionPrimitive):
 
         if not matchingCallOption:
             logging.warning("No matching CALL was found in the option chain for the strangle")
-            # Can't update the position we have on; need to exit strangle trade
-            self.__forceClose = True
-        else:
+
+        # If we were able to find an update for both the put and call option, we update option intrinsics
+        if matchingCallOption and matchingPutOption:
             # Update option intrinsics
+            putOpt.updateIntrinsics(matchingPutOption)
             callOpt.updateIntrinsics(matchingCallOption)
+            return True
+        else:
+            # Can't update the position we have on; need to exit strangle
+            self.__forceClose = True
+            return False
 
     def managePosition(self):
         """Using the criteria in the optional class attributes:
@@ -387,7 +392,7 @@ class Strangle(OptionPrimitive):
 
         if self.getCustomManagementFlag():
 
-            if self.calcProfitLossPercentage() <= -400:
+            if self.calcProfitLossPercentage() <= -300:
                 return True
 
         return False

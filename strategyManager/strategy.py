@@ -24,12 +24,15 @@ class Strategy(object):
          maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
          minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy
          minIVR:  minimum implied volatility rank needed to put on strategy
+         minBuyingPower:  minimum investment we want for the strategy -- since prices vary greatly over a range like
+                             1990 to 2017, we would like to have the same amount of money in the market at any given
+                             time, so we increase the number of contracts to reach this minBuyingPower
      """
 
      def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, expCycle=None,
                   optimalDTE=None, minimumDTE=None, roc=None, minDaysToEarnings=None, minCredit=None,
                   profitTargetPercent=None, customManagement=None, maxBidAsk=None, maxMidDev=None,
-                  minDaysSinceEarnings=None, minIVR=None):
+                  minDaysSinceEarnings=None, minIVR=None, minBuyingPower=None):
 
          """Inits Strategy class with constructor data.  We check to make sure that
          the user doesn't try to instantiate the Strategy class"""
@@ -56,6 +59,7 @@ class Strategy(object):
          self.__maxMidDev = maxMidDev
          self.__minDaysSinceEarnings = minDaysSinceEarnings
          self.__minIVR = minIVR
+         self.__minBuyingPower = minBuyingPower
 
      def getStartTime(self):
          return self.__startTime
@@ -110,6 +114,12 @@ class Strategy(object):
 
      def getMinIVR(self):
          return self.__minIVR
+
+     def getMinBuyingPower(self):
+         return self.__minBuyingPower
+
+     def setMinBuyingPower(self, minBuyingPower):
+         self.__minBuyingPower = minBuyingPower
 
      def checkForSignal(self, event):
          raise NotImplementedError("Each strategy must implement the 'checkForSignal' method")

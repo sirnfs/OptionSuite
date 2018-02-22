@@ -131,14 +131,15 @@ class Portfolio(object):
         Updates the intrinsics of the portfolio by updating the values of the options used in the different
         optionPrimitives.
         :param event: tick event with the option chain which will be be used to update the portfolio
+        :return netLiq - returns the current net liq of the portfolio
         """
 
         # Get the data from the tick event
         tickData = event.getData()
 
-        # If we did not get any tick data or there are not positions in the portfolio, return
+        # If we did not get any tick data or there are not positions in the portfolio, return netLiq only
         if not tickData or not self.__positions:
-            return
+            return self.__netLiq
 
         # Go through the positions currently in the portfolio and update the prices
         # Reset the delta, gamma, theta, and vega values for the entire portfolio
@@ -176,14 +177,14 @@ class Portfolio(object):
 
         # Add the realized capital to the profit / loss of all open positions to get final net liq
         self.__netLiq += self.__realizedCapital
-        #print("Net liq: ${}").format(self.__netLiq)
         logging.info("Net liq: %f", self.__netLiq)
 
         # Go through and delete any positions which were added to the idxsToDelete array
-        for idx in idxsToDelete:
-            #print("The {} position was closed").format(self.__positions[idx].getUnderlyingTicker())
+        for idx in reversed(idxsToDelete):
             logging.info('The %s position was closed', self.__positions[idx].getUnderlyingTicker())
             del(self.__positions[idx])
+
+        return self.__netLiq
 
     def __underlyingExists(self, position):
         """Check if the underlying we're trying to add to the portfolio already exists
@@ -192,7 +193,7 @@ class Portfolio(object):
         """
         for curPosition in self.__positions:
             if curPosition.getUnderlyingTicker() == position.getUnderlyingTicker():
-                logging.warning('Tried to add a position to the portfolio that already exists')
+                #logging.warning('Tried to add a position to the portfolio that already exists')
                 return True
 
         return False
