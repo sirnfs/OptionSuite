@@ -28,7 +28,7 @@ class BackTestSession(object):
         self.dataHandler = csvData.CsvData(directory, filename, dataProvider, self.eventQueue, chunkSize)
 
         # Parameters for strangle strategy -- TODO: move params to file
-        optCallDelta = 0.16
+        optCallDelta = 0.10 #0.16
         maxCallDelta = 0.30
         optPutDelta = -0.16
         maxPutDelta = -0.30
