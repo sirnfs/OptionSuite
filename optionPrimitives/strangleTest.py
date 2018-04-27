@@ -8,32 +8,32 @@ import pytz
 class TestStrangle(unittest.TestCase):
 
     def setUp(self):
-        """Create strangle with necessary params and test buying power calculation
+        """Create strangle with necessary params and test buying power calculation.
         Params for creating object:
-        daysBeforeClosing:  strangle must be closed if there are <= daysBeforeClosing to expiration
-        profitTargetPercent: minimum percent profit we want in order to close strangle
-        orderQuantity:  number of strangles
-        callOpt:  call option
-        putOpt:  put option
+        daysBeforeClosing:  Strangle must be closed if there are <= daysBeforeClosing to expiration.
+        profitTargetPercent: Minimum percent profit we want in order to close strangle.
+        orderQuantity:  Number of strangles.
+        callOpt:  Call option
+        putOpt:  Put option
         """
 
         daysBeforeClosing = 5
         orderQuantity = 1
         profitTargetPercent = 0.5
 
-        # Create put and call options
+        # Create put and call options.
         putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
                          optionSymbol="01", tradePrice=7.45)
         callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
                             optionSymbol="02", tradePrice=5.20)
 
-        # Create Strangle
+        # Create Strangle.
         self.strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing,
                                               profitTargetPercent)
 
     def testStrangleBuyingPower(self):
 
-        # Check buying power calc
+        # Check buying power calculation.
         buyingPower = self.strangleObj.getBuyingPower()
         self.assertAlmostEqual(buyingPower, 64045.0, 2)
 
@@ -42,7 +42,7 @@ class TestStrangle(unittest.TestCase):
         option prices for the puts and calls.
         """
 
-        # Create a list with two options matching the strangleObj except with different option prices
+        # Create a list with two options matching the strangleObj except with different option prices.
         tickData = []
         putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.25, askPrice=7.25,
                          optionSymbol="01")
@@ -64,7 +64,7 @@ class TestStrangle(unittest.TestCase):
         desired profit target threshold has been reached.
         """
 
-        # Create put and call options
+        # Create put and call options.
         tickData = []
         putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=3.00, askPrice=3.00,
                          optionSymbol="01")
@@ -73,28 +73,28 @@ class TestStrangle(unittest.TestCase):
                         optionSymbol = "02")
         tickData.append(callOpt)
 
-        # Update strangle with new values,
+        # Update strangle with new values.
         self.strangleObj.updateValues(tickData)
 
-        # Check if managePosition() returns true since the combined put and call prices reflect more than a 50% profit
+        # Check if managePosition() returns true since the combined put and call prices reflect more than a 50% profit.
         self.assertTrue(self.strangleObj.managePosition())
 
     def testStrangleManageDaysBeforeClosing(self):
         """Test that the strangle is set to be deleted from the portfolio if the number of days until expiration is
-        less than the daysBeforeClosing threshold
+        less than the daysBeforeClosing threshold.
         """
-        # Create put and call options
+        # Create put and call options.
         tickData = []
 
-        # Set up date / time formats
+        # Set up date / time formats.
         local = pytz.timezone('US/Eastern')
 
-        # Convert time zone of data 'US/Eastern' to UTC time
+        # Convert time zone of data 'US/Eastern' to UTC time.
         expDate = datetime.datetime.strptime("02/05/18", "%m/%d/%y")
         expDate = local.localize(expDate, is_dst=None)
         expDate = expDate.astimezone(pytz.utc)
 
-        # Convert time zone of data 'US/Eastern' to UTC time
+        # Convert time zone of data 'US/Eastern' to UTC time.
         curDate = datetime.datetime.strptime("02/02/18", "%m/%d/%y")
         curDate = local.localize(curDate, is_dst=None)
         curDate = curDate.astimezone(pytz.utc)
@@ -110,25 +110,25 @@ class TestStrangle(unittest.TestCase):
         orderQuantity = 1
         strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing)
 
-        # Check if managePosition() returns true since the current dateTime and DTE are less than daysBeforeClosing = 5
+        # Check if managePosition() returns true since the current dateTime and DTE are less than daysBeforeClosing = 5.
         self.assertTrue(strangleObj.managePosition())
 
     def testStrangleCalcProfitLossPercentage(self):
 
-        # Set up date / time formats
+        # Set up date / time formats.
         local = pytz.timezone('US/Eastern')
 
-        # Convert time zone of data 'US/Eastern' to UTC time
+        # Convert time zone of data 'US/Eastern' to UTC time.
         expDate = datetime.datetime.strptime("02/05/18", "%m/%d/%y")
         expDate = local.localize(expDate, is_dst=None)
         expDate = expDate.astimezone(pytz.utc)
 
-        # Convert time zone of data 'US/Eastern' to UTC time
+        # Convert time zone of data 'US/Eastern' to UTC time.
         curDate = datetime.datetime.strptime("02/02/18", "%m/%d/%y")
         curDate = local.localize(curDate, is_dst=None)
         curDate = curDate.astimezone(pytz.utc)
 
-        # Test the case where we sell a strangle and have a loss
+        # Test the case where we sell a strangle and have a loss.
         putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=6.00, askPrice=6.00,
                          tradePrice=3.00, optionSymbol="01", dateTime=curDate)
         callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=4.00, askPrice=4.00,
@@ -141,7 +141,7 @@ class TestStrangle(unittest.TestCase):
         profitLossPercentage = strangleObj.calcProfitLossPercentage()
         self.assertAlmostEqual(profitLossPercentage, -100)
 
-        # Test the case where we sell a strangle and have a profit
+        # Test the case where we sell a strangle and have a profit.
         putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=1.50, askPrice=1.50,
                          tradePrice=3.00, optionSymbol="01", dateTime=curDate)
         callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=1.00, askPrice=1.00,
@@ -153,7 +153,7 @@ class TestStrangle(unittest.TestCase):
         profitLossPercentage = strangleObj.calcProfitLossPercentage()
         self.assertAlmostEqual(profitLossPercentage, 50)
 
-        # Test the case where we buy a strangle and have a loss
+        # Test the case where we buy a strangle and have a loss.
         putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=1.50, askPrice=1.50,
                          tradePrice=3.00, optionSymbol="01", dateTime=curDate)
         callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=1.00, askPrice=1.00,
@@ -165,7 +165,7 @@ class TestStrangle(unittest.TestCase):
         profitLossPercentage = strangleObj.calcProfitLossPercentage()
         self.assertAlmostEqual(profitLossPercentage, -50)
 
-        # Test the case where we buy a strangle and have a profit
+        # Test the case where we buy a strangle and have a profit.
         putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=6.00, askPrice=6.00,
                          tradePrice=3.00, optionSymbol="01", dateTime=curDate)
         callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=4.00, askPrice=4.00,

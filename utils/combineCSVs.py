@@ -6,9 +6,6 @@ if __name__ == "__main__":
               '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2000_2010/RawIV.csv',
               '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017/RawIV.csv']
 
-    #files = ['/Users/msantoro/PycharmProjects/Backtester/sampleData/aapl_sample_ivolatility.csv',
-    #         '/Users/msantoro/PycharmProjects/Backtester/sampleData/aapl_sample_ivolatility.csv']
-
     chunkSize = 10000
     useHeader = True
 
