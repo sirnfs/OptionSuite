@@ -1,6 +1,7 @@
 from base import put
 from optionPrimitive import OptionPrimitive
 
+# This optionPrimitive is mostly unfinished.  The overloaded methods below need to be implemented.
 class NakedPut(OptionPrimitive):
 
     def __init__(self, underlyingTicker, strikePrice, longOrShort, delta, DTE, numContracts, underlyingPrice=None,
@@ -9,48 +10,42 @@ class NakedPut(OptionPrimitive):
         self.__numContracts = numContracts
         self.__primitiveElems = []
 
-        #Create multiple objects of class Put
+        # Create multiple objects of class Put.
         for i in range(self.__numContracts):
              self.__primitiveElems.append(put.Put(underlyingTicker, strikePrice,
                                           longOrShort, delta, DTE, underlyingPrice=underlyingPrice, bidPrice=bidPrice,
                                                   askPrice=askPrice))
 
-    def addPrimitive(self):
-        pass
-
-    def removePrimitive(self):
-        pass
-
     def getUnderlyingTicker(self):
-        """Get the name (string) of the underlying being used for the naked put
+        """Get the name (string) of the underlying being used for the naked put.
         """
         pass
 
     def getDelta(self):
-        """Used to get the delta for the strangle
+        """Used to get the delta for the strangle.
         """
         pass
 
     def getVega(self):
-        """Used to get the vega for the strangle
+        """Used to get the vega for the strangle.
         """
         pass
 
     def getTheta(self):
-        """Used to get the theta for the strangle
+        """Used to get the theta for the strangle.
         """
         pass
 
     def getGamma(self):
-        """Used to get the gamma for the strangle
+        """Used to get the gamma for the strangle.
         """
         pass
 
     def calcProfitLoss(self):
         """Calculate the profit and loss for the naked put position based on option values when the trade
-        was placed and new option values
+        was placed and new option values.
 
-        :return: profit / loss (positive decimal for profit, negative decimal for loss)
+        :return: Profit / loss (positive decimal for profit, negative decimal for loss).
         """
         pass
 
@@ -60,7 +55,7 @@ class NakedPut(OptionPrimitive):
         if we buy a put, we want the option value to increase; if we sell a put, we want the option value
         to decrease.
 
-        :return: profit / loss as a percentage of the initial option price.  Returns negative percentage for a loss
+        :return: Profit / loss as a percentage of the initial option price.  Returns negative percentage for a loss.
         """
         pass
 
@@ -69,23 +64,23 @@ class NakedPut(OptionPrimitive):
         primitive, and it should not confused with the number of option 
         contracts; e.g., number of iron condors or number of strangles.
         For this particular class, we are only dealing with puts, so it
-        will return the number of put contracts"""
+        will return the number of put contracts."""
         return self.__numContracts
 
     def getPrimitiveElements(self):
         """This function returns the array which contains all of the
-        options making up a primitive"""
+        options making up a primitive."""
         return self.__primitiveElems
 
     def getBuyingPower(self):
-        """The formula for calculating buying power is based off of Tastyworks.  This is for cash settled indices!
+        """The formula for calculating buying power is based off of TastyWorks.
            There are two possible methods to calculate buying power, and the method which
-           generates the maximum possible buying power is the one chosen
+           generates the maximum possible buying power is the one chosen.
 
-           :return: amount of buying power required to put on the trade
+           :return: Amount of buying power required to put on the trade.
         """
 
-        # Method 1 - 25% rule -- 25% of the underlying, less the difference between the strike price and the stock
+        # Method 1 - 20% rule -- 20% of the underlying, less the difference between the strike price and the stock
         # price, plus the option value, multiplied by number of contracts.
         underlyingPrice = self.__primitiveElems[0].getUnderlyingPrice()
 
@@ -94,15 +89,15 @@ class NakedPut(OptionPrimitive):
         putBuyingPower1 = ((0.2 * underlyingPrice) - (underlyingPrice - putStrikePrice) + currentPutPrice) * \
                           (self.__numContracts * 100)
 
-        # Method 2 - 15% rule -- 15% of the exercise value plus premium value.
+        # Method 2 - 10% rule -- 10% of the exercise value plus premium value.
         putBuyingPower2 = (0.1 * putStrikePrice + currentPutPrice) * self.__numContracts * 100
 
-        # Return the highest buying power from the two methods
+        # Return the highest buying power from the two methods.
         return max(putBuyingPower1, putBuyingPower2)
 
     def updateValues(self, tickData):
-        """Based on the latest pricing data, update the option values for the naked put
-        :param tickData: option chain with pricing information (puts, calls)
+        """Based on the latest pricing data, update the option values for the naked put.
+         :param tickData: option chain with pricing information (puts, calls).
          :return True if we were able to update values, false otherwise.
         """
         pass

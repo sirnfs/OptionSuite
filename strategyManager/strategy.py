@@ -1,32 +1,32 @@
 class Strategy(object):
      """This class sets up the basics for every strategy that will be used;
      For example, if we want to do an iron condor or a strangle, there
-     are certain parameters that must be define.
+     are certain parameters that must be defined.
      Attributes:
-         startDateTime:  date/time to start the live trading or backtest
-         strategy:  option strategy to use -- e.g., iron condor, strangle
-         buyOrSell:  do we buy an iron condor or sell an iron condor? 0 = buy, 1 = sell
-         underlying:  which underlying to use for the strategy
-         orderQuantity:  number of strangles, iron condors, etc
-         daysBeforeClose:  number of days before expiration to close the trade
+         startDateTime:  Date/time to start the live trading or backtest.
+         strategy:  Option strategy to use -- e.g., iron condor, strangle.
+         buyOrSell:  Do we buy an iron condor or sell an iron condor? 0 = buy, 1 = sell.
+         underlying:  Which underlying to use for the strategy.
+         orderQuantity:  Number of strangles, iron condors, etc.
+         daysBeforeClose:  Number of days before expiration to close the trade.
          
          optional attributes:
 
-         expCycle:  specifies if we want to do monthly ('m'); unspecified means we can do weekly, quarterly, etc
-         optimalDTE:  optimal number of days before expiration to put on strategy
-         minimumDTE:  minimum number of days before expiration to put on strategy
-         roc:  minimal return on capital for overall trade as a decimal
-         minDaysToEarnings:  minimum number of days to put on trade before earnings
-         minCredit:  minimum credit to collect on overall trade
-         profitTargetPercent:  percentage of initial credit to use when closing trade
-         customManagement:  boolean -- manages trade using custom rules
-         maxBidAsk:  maximum price to allow between bid and ask prices of option (for any strike or put/call)
-         maxMidDev:  maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice)
-         minDaysSinceEarnings:  minimum number of days to wait after last earnings before putting on strategy
-         minIVR:  minimum implied volatility rank needed to put on strategy
-         minBuyingPower:  minimum investment we want for the strategy -- since prices vary greatly over a range like
-                             1990 to 2017, we would like to have the same amount of money in the market at any given
-                             time, so we increase the number of contracts to reach this minBuyingPower
+         expCycle:  Specifies if we want to do monthly ('m'); unspecified means we can do weekly, quarterly, etc.
+         optimalDTE:  Optimal number of days before expiration to put on strategy.
+         minimumDTE:  Minimum number of days before expiration to put on strategy.
+         roc:  Minimal return on capital for overall trade as a decimal.
+         minDaysToEarnings:  Minimum number of days to put on trade before earnings.
+         minCredit:  Minimum credit to collect on overall trade.
+         profitTargetPercent:  Percentage of initial credit to use when closing trade.
+         customManagement:  boolean -- manages trade using custom rules.
+         maxBidAsk:  Maximum price to allow between bid and ask prices of option (for any strike or put/call).
+         maxMidDev:  Maximum deviation from midprice on opening and closing of trade (e.g., 0.02 cents from midprice).
+         minDaysSinceEarnings:  Minimum number of days to wait after last earnings before putting on strategy.
+         minIVR:  Minimum implied volatility rank needed to put on strategy.
+         minBuyingPower:  Minimum investment we want for the strategy -- since prices vary greatly over a range like
+                          1990 to 2017, we would like to have the same amount of money in the market at any given
+                          time, so we increase the number of contracts to reach this minBuyingPower.
      """
 
      def __init__(self, startTime, strategy, buyOrSell, underlying, orderQuantity, daysBeforeClose, expCycle=None,
@@ -35,11 +35,11 @@ class Strategy(object):
                   minDaysSinceEarnings=None, minIVR=None, minBuyingPower=None):
 
          """Inits Strategy class with constructor data.  We check to make sure that
-         the user doesn't try to instantiate the Strategy class"""
+         the user doesn't try to instantiate the Strategy class."""
 
          if self.__class__ == Strategy:
              raise NotImplementedError, "Cannot create object of class Strategy; must use derived classes such " \
-                                         "as StrangleStrat or ICStrat"
+                                         "as StrangleStrat."
 
          self.__startTime = startTime
          self.__strategy = strategy
@@ -122,4 +122,4 @@ class Strategy(object):
          self.__minBuyingPower = minBuyingPower
 
      def checkForSignal(self, event):
-         raise NotImplementedError("Each strategy must implement the 'checkForSignal' method")
+         raise NotImplementedError("Each strategy must implement the 'checkForSignal' method.")

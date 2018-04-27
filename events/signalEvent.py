@@ -1,8 +1,8 @@
 from event import EventHandler
 
 class SignalEvent(EventHandler):
-    """This class handles manages the events for signals generated off of incoming data;
-    E.g. -- if the input data results in a sell strangle event, a SignalEvent will be created
+    """This class handles the events for signals generated off of incoming data;
+    E.g. -- if the input data results in a sell strangle event, a SignalEvent will be created.
     """
 
     def __init__(self):

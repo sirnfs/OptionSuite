@@ -104,3 +104,7 @@ ENV/
 
 # mkdocs documentation
 /site
+
+# Ignore specific files
+combineCSVs.py
+plotStats.py

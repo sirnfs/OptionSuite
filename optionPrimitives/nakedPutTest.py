@@ -4,7 +4,7 @@ import nakedPut
 class TestNakedPutStrategy(unittest.TestCase):
 
     def setUp(self):
-        """Create naked put object and perform tests
+        """Create naked put object and perform tests.
            Params for creating object:
            underlyingTicker -- stock ticker symbol
            strikePrice - strike price of the PUT option
@@ -19,7 +19,7 @@ class TestNakedPutStrategy(unittest.TestCase):
            askPrice -- price at which option can be bought
            """
 
-        #Create Naked Put
+        # Create Naked Put.
         self.nakedPutObj = nakedPut.NakedPut('SPY', 200, 'Short', 0.16, 45, 2, underlyingPrice=210, bidPrice=0.5,
                                              askPrice=0.5)
 

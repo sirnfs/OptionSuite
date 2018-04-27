@@ -2,56 +2,53 @@ from abc import ABCMeta, abstractmethod
 
 class OptionPrimitive(object):
     """This class is a generic type for any primitive that can be made using
-       a PUT or CALL option and/or stock, e.g., iron condor or strangle
-       Since the primitive is often created prior to having historical data or
-       live data, many of the Option fields will be blank until the trade
-       is executed
+       a PUT or CALL option and/or stock, e.g., iron condor or strangle.
     """
     __metaclass__ = ABCMeta
 
     @abstractmethod
     def getUnderlyingTicker(self):
-        """Get the name (string) of the underlying being used for the option primtive
+        """Get the name (string) of the underlying being used for the option primitive.
         """
         pass
 
     @abstractmethod
     def getBuyingPower(self):
         """Used to calculate the buying power needed for the
-        option primitive
+        option primitive.
         """
         pass
 
     @abstractmethod
     def getDelta(self):
-        """Used to get the delta for the option primitive
+        """Used to get the delta for the option primitive.
         """
         pass
 
     @abstractmethod
     def getVega(self):
-        """Used to get the vega for the option primitive
+        """Used to get the vega for the option primitive.
         """
         pass
 
     @abstractmethod
     def getTheta(self):
-        """Used to get the theta for the option primitive
+        """Used to get the theta for the option primitive.
         """
         pass
 
     @abstractmethod
     def getGamma(self):
-        """Used to get the gamma for the option primitive
+        """Used to get the gamma for the option primitive.
         """
         pass
 
     @abstractmethod
     def calcProfitLoss(self):
         """Calculate the profit and loss for the option primitive based on option values when the trade
-        was placed and new option values
+        was placed and new option values.
 
-        :return: profit / loss (positive decimal for profit, negative decimal for loss)
+        :return: Profit / loss (positive decimal for profit, negative decimal for loss).
         """
         pass
 
@@ -60,35 +57,14 @@ class OptionPrimitive(object):
         """Calculate the profit and loss for the option primitive based on option values when the trade
         was placed and new option values.
 
-        :return: profit / loss as a percentage of the initial option prices.  Returns negative percentage for a loss
+        :return: Profit / loss as a percentage of the initial option prices.  Returns negative percentage for a loss.
         """
         pass
 
     @abstractmethod
     def updateValues(self, tickData):
-        """Based on the latest pricing data, update the option values
-        :param tickData: option chain with pricing information
-         :return True if we were able to update values, false otherwise.
-        """
-        pass
-
-    @abstractmethod
-    def addPrimitive(self):
-        """Used to add the strategy to the order book
-           This is not closing out an order, and it can
-           only be used if the strategy hasn't been executed
-           This will probably need to add the strategy to the
-           database
-        """
-        pass
-
-    @abstractmethod
-    def removePrimitive(self):
-        """Used to remove the strategy from order book
-           This is not closing out an order, and it can
-           only be used if the strategy hasn't been executed
-           Is this needed here?  We will probably need to save the
-           strategy to a database, and we can probably remove it
-           through a different module.  
+        """Based on the latest pricing data, update the option values.
+        :param tickData: option chain with pricing information.
+        :return True if we were able to update values, false otherwise.
         """
         pass
