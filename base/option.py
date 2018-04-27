@@ -1,77 +1,51 @@
 
 class Option(object):
-    """This class defines one the basic types for the
-    backtester -- an option.  Other classes such as 
-    put or call will be derived from this class
-
-     An option has the following internals
-     -Underlying price
-     -Underlying ticker symbol
-     -Option Symbol
-     -Alias (old symbol for option if it exists)
-     -Strike price
-     -Buy/Sell (long/short) -- binary value
-     -Bid price
-     -Ask price
-     -Open interest
-     -Volume
-     -Quote Date / Time
-     -Delta
-     -Theta
-     -Gamma
-     -Rho
-     -Vega
-     -Implied Volatility
-     -Days to Expiration
-     -Exchange Code
-     -Exercise Price
-     -Assignment price
-     -Cost to open
-     -Cost to close
+    """This class defines the basic type for the backtester or live trader -- an option.
+    Other classes such as put or call are derived from this class.
 
      Attributes:
-       underlyingPrice:  price of the underlying / stock which has option derivatives in dollars
-       underlyingTicker:  ticker symbol (e.g., SPY) of underlying
-       optionSymbol:  code different than the underlying ticker used to denote option
-       optionAlias:  old code used to denote option if it changed; usually blank
-       strikePrice:  strike price of option
-       optionType:  put or call
-       longOrShort:  indicates if we are long or short the option; 'Long' = long and 'Short' = short
-       bidPrice:  current bid price of option
-       askPrice:  current asking price of option
-       openInterest:  number of open option contracts
-       volume:  number of contracts traded
-       dateTime:  data / time of quote recieved; would also be data / time bought / sold
-       delta:  greek for quantifying percent of stock we're long or short (-1 to 1)
-       theta:  daily return in dollars if no movement in underlying price
-       gamma:  describes rate of change of delta (float)
-       rho:  how much option price changes with change in interest rate (dollars)
-       vega:  change in price of option for every 1% change in volatility
-       impliedVol:  implied volatility percentage (calculated using Black Scholes & binominal tree
-       DTE:  days to expiration of option 
-       exchangeCode:  symbol used to denote which exchanged used or where quote came from
-       exercisePrice:  price to exercise option early 
-       assignPrice:  price you must pay if other party exercises option
-       openCost:  cost to open the option trade
-       closeCost:  cost to close out the option trade
-       tradeID:  used to keep track of the trade that was put on so we can reference it later
-                 the tradeID is associated with both the strategy and the options in the strategy
+       underlyingPrice:  price of the underlying / stock which has option derivatives in dollars.
+       underlyingTradePrice:  price of underlying at the time the trade was placed.
+       underlyingTicker:  ticker symbol (e.g., SPY) of underlying.
+       optionSymbol:  code different than the underlying ticker used to denote option.
+       optionAlias:  old code used to denote option if it changed; usually blank.
+       strikePrice:  strike price of option.
+       optionType:  put or call.
+       longOrShort:  indicates if we are long or short the option; 'Long' = long and 'Short' = short.
+       bidPrice:  current bid price of option.
+       askPrice:  current asking price of option.
+       tradePrice:  price of option when trade was executed / put on.
+       openInterest:  number of open option contracts.
+       volume:  number of contracts traded.
+       dateTime:  data / time of quote received; would also be data / time bought / sold.
+       delta:  greek for quantifying percent of stock we're long or short (-1 to 1).
+       theta:  daily return in dollars if no movement in underlying price.
+       gamma:  describes rate of change of delta (float).
+       rho:  how much option price changes with change in interest rate (dollars).
+       vega:  change in price of option for every 1% change in volatility.
+       impliedVol:  implied volatility percentage.
+       DTE:  days to expiration of option.
+       exchangeCode:  symbol used to denote which exchanged used or where quote came from.
+       exercisePrice:  price to exercise option early.
+       assignPrice:  price you must pay if other party exercises option.
+       openCost:  cost to open the option trade.
+       closeCost:  cost to close out the option trade.
      """
 
-    def __init__(self, underlyingTicker, strikePrice, optionType, longOrShort, delta, DTE,
-                 underlyingPrice=None, optionSymbol=None, optionAlias=None, bidPrice=None,
-                 askPrice=None, openInterest=None, volume=None, dateTime=None, theta=None,
+    def __init__(self, underlyingTicker, strikePrice, optionType, delta, DTE, longOrShort=None,
+                 underlyingPrice=None, underlyingTradePrice=None, optionSymbol=None, optionAlias=None, bidPrice=None,
+                 askPrice=None, tradePrice=None, openInterest=None, volume=None, dateTime=None, theta=None,
                  gamma=None, rho=None, vega=None, impliedVol=None, exchangeCode=None,
-                 exercisePrice=None, assignPrice=None, openCost=None, closeCost=None,
-                 tradeID=None):
-        """Inits Option class with constructor data.  We check to make sure that
-        the user doesn't try to instantiate the Option class"""
+                 exercisePrice=None, assignPrice=None, openCost=None, closeCost=None):
+        """Initializes Option class with constructor data.  We check to make sure that
+        the user doesn't try to instantiate the Option class."""
 
         if self.__class__ == Option:
             raise NotImplementedError, "Cannot create object of class Option; must use PUT or CALL " \
                                        "classes"
 
         self.__underlyingPrice = underlyingPrice
+        self.__underlyingTradePrice = underlyingTradePrice
         self.__underlyingTicker = underlyingTicker
         self.__optionSymbol = optionSymbol
         self.__optionAlias = optionAlias
@@ -80,6 +54,7 @@ class Option(object):
         self.__longOrShort = longOrShort
         self.__bidPrice = bidPrice
         self.__askPrice = askPrice
+        self.__tradePrice = tradePrice
         self.__openInterest = openInterest
         self.__volume = volume
         self.__dateTime = dateTime
@@ -95,10 +70,13 @@ class Option(object):
         self.__assignPrice = assignPrice
         self.__openCost = openCost
         self.__closeCost = closeCost
-        self.__tradeID = tradeID
 
+    # Getters
     def getUnderlyingPrice(self):
         return self.__underlyingPrice
+
+    def getUnderlyingTradePrice(self):
+        return self.__underlyingTradePrice
 
     def getUnderlyingTicker(self):
         return self.__underlyingTicker
@@ -123,6 +101,9 @@ class Option(object):
 
     def getAskPrice(self):
         return self.__askPrice
+
+    def getTradePrice(self):
+        return self.__tradePrice
 
     def getOpenInterest(self):
         return self.__openInterest
@@ -169,6 +150,61 @@ class Option(object):
     def getCloseCost(self):
         return self.__closeCost
 
-    def getTradeID(self):
-        return self.__tradeID
+    # Setters
+    def setUnderlyingPrice(self, underlyingPrice):
+        self.__underlyingPrice = underlyingPrice
 
+    def setBidPrice(self, bidPrice):
+        self.__bidPrice = bidPrice
+
+    def setAskPrice(self, askPrice):
+        self.__askPrice = askPrice
+
+    def setOpenInterest(self, openInterest):
+        self.__openInterest = openInterest
+
+    def setOptionVolume(self, optionVolume):
+        self.__volume = optionVolume
+
+    def setDateTime(self, dateTime):
+        self.__dateTime = dateTime
+
+    def setDelta(self, delta):
+        self.__delta = delta
+
+    def setTheta(self, theta):
+        self.__theta = theta
+
+    def setGamma(self, gamma):
+        self.__gamma = gamma
+
+    def setRho(self, rho):
+        self.__rho = rho
+
+    def setVega(self, vega):
+        self.__vega = vega
+
+    def setImpliedVol(self, impliedVol):
+        self.__impliedVol = impliedVol
+
+    # Calculations
+    def calcOptionPriceDiff(self):
+        """Calculate the difference in price of the put when the trade was placed versus its current value.
+        Specifically, diff = original price - current price.  The current price used is actually the mid price, or
+        the average of the bid price and ask price.
+
+        :return: price difference (original price - current price).
+        """
+        midPrice = (self.getBidPrice() + self.getAskPrice())/2.0
+        return (self.getTradePrice() - midPrice) * 100
+
+    def getNumDaysLeft(self):
+        '''
+        Determine the number of days between the curDateTime and the expDateTime.
+        curDateTime: current date in mm/dd/yy format.
+        expDateTime: option expiration date in mm/dd/yy format.
+        :return: number of days between curDateTime and expDateTime.
+        '''
+        curDateTime = self.getDateTime()
+        expDateTime = self.getDTE()
+        return (expDateTime - curDateTime).days
