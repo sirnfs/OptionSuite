@@ -9,11 +9,18 @@ The objective of the OptionSuite library is to create a general framework to bac
 # Overview
 The library is designed in a modular way, and several abstractions are provided which allow the user to add additional features.  The structure of the library is as follows:
 
-base	
+base
+
 dataHandler
+
 events	
+
 optionPrimitives	
+
 portfolioManager	
+
 sampleData	
+
 strategyManager	
+
 utils
