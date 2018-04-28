@@ -7,7 +7,6 @@ __pycache__/
 *$py.class
 
 # CSV files and doc files used for backtesting
-*.csv
 *.doc
 
 # C extensions
