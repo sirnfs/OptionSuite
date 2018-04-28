@@ -106,5 +106,4 @@ ENV/
 /site
 
 # Ignore specific files
-combineCSVs.py
-plotStats.py
+/marketData
