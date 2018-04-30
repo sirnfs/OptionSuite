@@ -1,6 +1,8 @@
 # OptionSuite
 Options strategy backtester and live trader* framework.
 
+[Getting started](#getting-started) decribes what you need to get started backtesting.
+
 # Objective
 The objective of the OptionSuite library is to create a general framework to backtest options strategies and to be extensible enough to handle live trading.
 
