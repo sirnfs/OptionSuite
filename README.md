@@ -1,5 +1,5 @@
 # OptionSuite
-Options strategy backtester and live trader* framework.
+Option / stock strategy backtester and live trader* framework.
 
 [Getting started](#getting-started) decribes what you need to get started backtesting.
 
