@@ -28,4 +28,27 @@ The library is designed in a modular way, and several abstractions are provided 
 **backTester.py** - this is the "main" method for the library.  It sets up all parameters for a backtesting session, and initializes the **dataHandler** class, the **portfolioManager** class, and the **strategyManager** class.  It is helpful to start with this file to see how all of the modules work together.
 
 # Getting Started 
+*The library has been tested with Python 2.7+*
+
+To get started, you first need some historical data for the backtests.  In the *backTester.py* file, there are three lines used to load a CSV of historical data.
+
+```
+dataProvider = 'iVolatility'
+directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX'
+filename = 'combinedCSV.csv'
+```
+
+The *combinedCSV.csv* file used during development and testing contains SPX data from 1990 to 2017 provided by [iVolatility](https://www.ivolatility.com/).  If you'd like to use the same dataset I did, then you want to request the EOD Raw IV dataset for SPX.  You can request different time periods.  A large time period such as 1990 to 2017 is broken up into multiple CSVs.  The *combineCSVs.py* in **utils** can be used to combine multiple CSVs into a single CSV.
+
+Once you have downloaded the data, simply update the three lines above, and you're ready to run *backTester.py*.
+
+To plot output data such as cumulative profit / loss, I use Python's logging module to write output data to a file.  The logging initialization is done in the `__main__` function of *backTester.py* as shown below.  There is a basic script *plotStats.py* in **utils** which takes the logging data and uses *matplotlib* to do the plotting.  If you are going to be doing several plots, it is worth automating this process.   
+
+```
+# Set up logging for the session.
+logging.basicConfig(filename='session.log', level=logging.DEBUG)
+```
+
+# Troubleshooting
+Please send bugs or any other issues you encounter to [msantoro@gmail.com](mailto:msantoro@gmail.com).  I will do my best to help you get up and running.  You can also report an issue using GitHub's issue tracker.
 
