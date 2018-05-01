@@ -32,7 +32,19 @@ The library is designed in a modular way, and several abstractions are provided 
 # Getting Started 
 *The library has been tested with Python 2.7+*
 
-To get started, you first need some historical data for the backtests.  In the *backTester.py* file, there are three lines used to load a CSV of historical data.
+To get started, you first need some historical data for the backtests.  
+
+## Getting the Data
+
+The *combinedCSV.csv* file used during development and testing contains SPX data from 1990 to 2017 provided by [iVolatility](http://www.ivolatility.com/fast_data_sales_form1.j).  If you'd like to use the same dataset I did, then you want to request the EOD Raw IV dataset for SPX. 
+
+*There is a 10% discount on all orders greater than $100 if you use code SupraCV10PCTOFF in the "Please tell us what data you want to receive:" field.*
+
+You can request different time periods.  A large time period such as 1990 to 2017 is broken up into multiple CSVs.  The *combineCSVs.py* in **utils** can be used to combine multiple CSVs into a single CSV.
+
+## Loading the Data
+
+Once you have downloaded the data, simply update the three lines below, and you're ready to run *backTester.py*.
 
 ```
 dataProvider = 'iVolatility'
@@ -40,9 +52,7 @@ directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/S
 filename = 'combinedCSV.csv'
 ```
 
-The *combinedCSV.csv* file used during development and testing contains SPX data from 1990 to 2017 provided by [iVolatility](https://www.ivolatility.com/).  If you'd like to use the same dataset I did, then you want to request the EOD Raw IV dataset for SPX.  You can request different time periods.  A large time period such as 1990 to 2017 is broken up into multiple CSVs.  The *combineCSVs.py* in **utils** can be used to combine multiple CSVs into a single CSV.
-
-Once you have downloaded the data, simply update the three lines above, and you're ready to run *backTester.py*.
+## Visualizing the Data
 
 To plot output data such as cumulative profit / loss, I use Python's logging module to write output data to a file.  The logging initialization is done in the `__main__` function of *backTester.py* as shown below.  There is a basic script *plotStats.py* in **utils** which takes the logging data and uses *matplotlib* to do the plotting.  If you are going to be doing several plots, it is worth automating this process.   
 
