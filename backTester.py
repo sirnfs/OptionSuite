@@ -25,7 +25,6 @@ class BackTestSession(object):
     self.eventQueue = queue.Queue()
 
     # Create CsvData class object.
-    # TODO: this is too slow; let's break up the files by week maybe and load a directory?
     dataProvider = 'iVolatility'
     filename = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/combinedCSV.csv'
     self.dataHandler = csvData.CsvData(csvPath=filename, dataProvider=dataProvider, eventQueue=self.eventQueue)
@@ -62,26 +61,18 @@ class BackTestSession(object):
 
 def run(session):
   while (1):  #Infinite loop to keep processing items in queue.
-    # print('Trying another...')
     try:
       event = session.eventQueue.get(False)
     except queue.Empty:
       #Get data for tick event.
-      # print('try getting data.')
       if not session.dataHandler.getNextTick():
         # Get out of infinite while loop; no more data available.
         break
-      # print('got data.')
     else:
       if event is not None:
         if event.type == event_class.EventTypes.TICK:
-          #self.cur_time = event.time
           session.strategyManager.checkForSignal(event)
           session.portfolioManager.updatePortfolio(event)
-          # Update the buying power that can now be used for the strategy, but only if minBuyingPower is not
-          # set to None.
-          # if session.minBuyingPower:
-          #     session.strategyManager.setMinBuyingPower(session.maxCapitalToUsePerTrade*netLiq)
         elif event.type == event_class.EventTypes.SIGNAL:
           session.portfolioManager.onSignal(event)
         else:
@@ -89,7 +80,7 @@ def run(session):
 
 if __name__ == "__main__":
   # Set up logging for the session.
-  logging.basicConfig(filename='session.log', level=logging.FATAL) #level=logging.DEBUG)
+  logging.basicConfig(filename='session.log', level=logging.DEBUG)
 
   # Create a session and configure the session.
   session = BackTestSession()
