@@ -85,7 +85,6 @@ class CsvData(dataHandler.DataHandler):
         if column == dateColumnName:
           self.__dateColumnIndex = index
       if self.__dateColumnIndex is None:
-        # TODO(msantoro): Test this error.
         raise TypeError('The dateColumnName was not found in the CSV.')
 
       rowList = []
