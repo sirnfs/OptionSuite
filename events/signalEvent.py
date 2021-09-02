@@ -1,26 +1,19 @@
-from event import EventHandler
+from events import event
+from typing import Any, Iterable
 
-class SignalEvent(EventHandler):
-    """This class handles the events for signals generated off of incoming data;
-    E.g. -- if the input data results in a sell strangle event, a SignalEvent will be created.
+class SignalEvent(event.EventHandler):
+  """This class handles the events for signals to carry out on tick data."""
+
+  def __init__(self) -> None:
+    self.__data = None
+    self.type = event.EventTypes.SIGNAL
+
+  def getData(self) -> Iterable[Any]:
+    return self.__data
+
+  def createEvent(self, data: Iterable[Any]) -> None:
+    """Create a signal event.
+    Attributes:
+        data: input data for the event.
     """
-
-    def __init__(self):
-        self.__data = None
-        self.type = 'SIGNAL'
-
-    def getData(self):
-        return self.__data
-
-    def createEvent(self, data):
-        """
-        Attributes:
-            data: input data for the event. e.g., row of CSV data or buy/sell info for signal event
-        """
-        self.__data = data
-
-    def deleteEvent(self):
-        """
-        Delete an event
-        """
-        pass
+    self.__data = data

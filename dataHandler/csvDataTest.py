@@ -1,82 +1,76 @@
 import unittest
-import csvData
-import Queue as queue
-import datetime
-import pytz
+import decimal
+from dataHandler import csvData
+import queue
 
 class TestCSVHandler(unittest.TestCase):
 
-    # Used to set up the unittest class
-    def setUp(self):
-        # Create CsvData class object
-        self.dataProvider = 'iVolatility'
-        self.directory = '/Users/msantoro/PycharmProjects/Backtester/sampleData'
-        self.filename = 'aapl_sample_ivolatility.csv'
-        self.eventQueue = queue.Queue()
-        self.chunkSize = 1822
-        self.csvObj = csvData.CsvData(self.directory, self.filename, self.dataProvider, self.eventQueue, self.chunkSize)
+  def setUp(self):
+      # Create CsvData class object.
+      self._dataProvider = 'iVolatility'
+      self._filename = '/Users/msantoro/PycharmProjects/Backtester/sampleData/aapl_sample_ivolatility.csv'
+      self._eventQueue = queue.Queue()
+      self._csvObj = csvData.CsvData(csvPath=self._filename, dataProvider=self._dataProvider,
+                                     eventQueue=self._eventQueue)
 
-    def testGetOptionChain(self):
-        # Get option chain for the first time/date from CSV.
-        self.csvObj.getOptionChain()
+  def testOpenDataSourceNoCSVFound(self):
+    """Tests that an exception is raised when no CSV is found."""
+    with self.assertRaisesRegex(OSError, 'Unable to open CSV at location: bad_path_name.'):
+      csvData.CsvData(csvPath='bad_path_name', dataProvider=self._dataProvider,
+                      eventQueue=self._eventQueue)
 
-        # Get event from the queue.
-        event = self.eventQueue.get()
-        data = event.getData()
+  def testOpenDataSourceInvalidDataProvider(self):
+    """Tests that an exception is rasied if the requested data provider isn't in the config file."""
+    with self.assertRaisesRegex(ValueError, ('The requested data provider: unknown_data_provider was not found in '
+      'dataProviders.json')):
+      csvData.CsvData(csvPath=self._filename, dataProvider='unknown_data_provider',
+                      eventQueue=self._eventQueue)
 
-        # Check that we got the right number of rows from the csv.
-        self.assertEqual(len(data), 1822)
+  def testGetOptionChain(self):
+    """Tests that an option chain is successfully read from CSV file."""
+    # The first and second calls to getNextTick should load one option chain into the queue and return True,
+    # and the third call should return False
+    self.assertTrue(self._csvObj.getNextTick())
+    self.assertTrue(self._eventQueue.qsize(), 1)
+    self.assertTrue(self._csvObj.getNextTick())
+    self.assertTrue(self._eventQueue.qsize(), 2)
+    self.assertFalse(self._csvObj.getNextTick())
+    self.assertTrue(self._eventQueue.qsize(), 2)
 
-        # Get the first object of type put/call and do some basic checks.
-        firstOption = data[0]
+    # Check number of option objects in the first and second queue positions.
+    desiredNumObjects = 1822
+    self.assertEqual(len(self._eventQueue.get().getData()), desiredNumObjects)
+    self.assertEqual(len(self._eventQueue.get().getData()), desiredNumObjects)
+    self.assertEqual(self._eventQueue.qsize(), 0)
 
-        # Check that we're able to get underlying ticker symbol.
-        underlyingTicker = firstOption.getUnderlyingTicker()
-        self.assertEqual(underlyingTicker, 'AAPL')
+  def testGetOptionChainBadColumnName(self):
+    """Tests that an exception is raised if column name in the CSV doesn't match the one in dataProviders.json."""
+    # Create CsvData class object.
+    dataProvider = 'iVolatility'
+    filename = '/Users/msantoro/PycharmProjects/Backtester/sampleData/bad_column_name.csv'
+    eventQueue = queue.Queue()
+    csvObj = csvData.CsvData(csvPath=filename, dataProvider=dataProvider, eventQueue=eventQueue)
 
-        # Check that we got the right option type.
-        optionType = firstOption.getOptionType()
-        self.assertEqual(optionType, 'CALL')
+    with self.assertRaisesRegex(TypeError, ('The dateColumnName was not found in the CSV')):
+      csvObj.getNextTick()
 
-        # Check that we're able to get the correct date / time.
-        curDateTime = firstOption.getDateTime()
-        local = pytz.timezone('US/Eastern')
-        dateTime = datetime.datetime.strptime('8/7/14', "%m/%d/%y")
-        dateTime = local.localize(dateTime, is_dst=None)
-        dateTime = dateTime.astimezone(pytz.utc)
-        self.assertEqual(curDateTime, dateTime)
-
-        # Get option chain for the second date/time from CSV.
-        self.csvObj.getOptionChain()
-
-        # Get event from the queue.
-        event = self.eventQueue.get()
-        data = event.getData()
-
-        # Get the first object of type put/call and do some basic checks.
-        firstOption = data[0]
-
-        # Check that we're able to get underlying ticker symbol.
-        underlyingTicker = firstOption.getUnderlyingTicker()
-        self.assertEqual(underlyingTicker, 'SPY')
-
-        # Check that we got the right option type.
-        optionType = firstOption.getOptionType()
-        self.assertEqual(optionType, 'CALL')
-
-        # Check that we're able to get the correct date / time.
-        curDateTime = firstOption.getDateTime()
-        local = pytz.timezone('US/Eastern')
-        dateTime = datetime.datetime.strptime('8/8/14', "%m/%d/%y")
-        dateTime = local.localize(dateTime, is_dst=None)
-        dateTime = dateTime.astimezone(pytz.utc)
-        self.assertEqual(curDateTime, dateTime)
-
-        # Try to get one more option chain -- this should result in an error.
-        returnVal = self.csvObj.getOptionChain()
-
-        # Check return value.
-        self.assertEqual(returnVal, False)
+  def testCreateBaseType(self):
+    """Tests that Put and Call objects are created successfully."""
+    # First row in the sample data is a call, and second row is a put.
+    eventQueue = queue.Queue()
+    csvObj = csvData.CsvData(csvPath=self._filename, dataProvider=self._dataProvider, eventQueue=eventQueue)
+    csvObj.getNextTick()
+    optionChainObjs = eventQueue.get().getData()
+    desiredCallAskPrice = decimal.Decimal(40.45)
+    desiredPutAskPrice = decimal.Decimal(0.01)
+    desiredStrikePrice = 55
+    desiredUnderlyingTicker = 'AAPL'
+    self.assertEqual(optionChainObjs[0].underlyingTicker, desiredUnderlyingTicker)
+    self.assertEqual(optionChainObjs[0].strikePrice, desiredStrikePrice)
+    self.assertEqual(optionChainObjs[1].underlyingTicker, desiredUnderlyingTicker)
+    self.assertEqual(optionChainObjs[1].strikePrice, desiredStrikePrice)
+    self.assertAlmostEqual(optionChainObjs[0].askPrice, desiredCallAskPrice)
+    self.assertAlmostEqual(optionChainObjs[1].askPrice, desiredPutAskPrice)
 
 if __name__ == '__main__':
     unittest.main()

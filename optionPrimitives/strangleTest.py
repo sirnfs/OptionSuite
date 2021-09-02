@@ -1,181 +1,257 @@
 import unittest
-import strangle
+from optionPrimitives import optionPrimitive
+from optionPrimitives import strangle
 from base import put
 from base import call
 import datetime
-import pytz
+import decimal
 
 class TestStrangle(unittest.TestCase):
 
-    def setUp(self):
-        """Create strangle with necessary params and test buying power calculation.
-        Params for creating object:
-        daysBeforeClosing:  Strangle must be closed if there are <= daysBeforeClosing to expiration.
-        profitTargetPercent: Minimum percent profit we want in order to close strangle.
-        orderQuantity:  Number of strangles.
-        callOpt:  Call option
-        putOpt:  Put option
-        """
+  def setUp(self):
+    orderQuantity = 1
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                     strikePrice=decimal.Decimal(2690), delta=0.15, vega=0.04, theta=-0.07, gamma=0.11,
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(7.45), askPrice=decimal.Decimal(7.50), tradePrice=decimal.Decimal(7.475))
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                        strikePrice=decimal.Decimal(2855), delta=-0.16, vega=0.05, theta=-0.06, gamma=0.12,
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(5.20), askPrice=decimal.Decimal(5.40),
+                        tradePrice=decimal.Decimal(5.30))
+    self.__strangleObj = strangle.Strangle(orderQuantity=orderQuantity, callOpt=callOpt, putOpt=putOpt,
+                                           buyOrSell=optionPrimitive.TransactionType.SELL)
+    # The parameters below are used to update the prices of the initial strangle above.
+    self.__tickData = []
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2790.0), strikePrice=decimal.Decimal(2690),
+                     delta=0.13, vega=0.03, theta=-0.06, gamma=0.12,
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(7.25), askPrice=decimal.Decimal(7.350))
+    self.__tickData.append(putOpt)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2790.0),
+                        strikePrice=decimal.Decimal(2855), delta=-0.20, vega=0.06, theta=-0.07, gamma=0.14,
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(5.60), askPrice=decimal.Decimal(5.80))
+    self.__tickData.append(callOpt)
 
-        daysBeforeClosing = 5
-        orderQuantity = 1
-        profitTargetPercent = 0.5
+  def testGetDelta(self):
+    """Tests that delta values are summed for the strangle."""
+    self.assertAlmostEqual(self.__strangleObj.getDelta(), -0.01)
 
-        # Create put and call options.
-        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
-                         optionSymbol="01", tradePrice=7.45)
-        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
-                            optionSymbol="02", tradePrice=5.20)
+  def testGetDeltaMultipleContracts(self):
+    """Tests that delta values are summed for the strangle."""
+    self.__strangleObj.setNumContracts(2)
+    self.assertAlmostEqual(self.__strangleObj.getDelta(), -0.02)
+    self.__strangleObj.setNumContracts(1)
 
-        # Create Strangle.
-        self.strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing,
-                                              profitTargetPercent)
+  def testGetDeltaNoneValue(self):
+    """Tests that a value of None is returned if one of the delta is None."""
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2690, delta=None,
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=7.45,
+                     askPrice=7.50, tradePrice=7.475)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2855, delta=-0.16,
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=5.20,
+                        askPrice=5.40, tradePrice=5.30)
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.SELL)
+    self.assertIsNone(strangleObj.getDelta())
 
-    def testStrangleBuyingPower(self):
+  def testGetVega(self):
+    """Tests that vega values are summed for the strangle."""
+    self.assertAlmostEqual(self.__strangleObj.getVega(), 0.09)
 
-        # Check buying power calculation.
-        buyingPower = self.strangleObj.getBuyingPower()
-        self.assertAlmostEqual(buyingPower, 64045.0, 2)
+  def testGetVegaMultipleContracts(self):
+    """Tests that vega values are summed for the strangle."""
+    self.__strangleObj.setNumContracts(2)
+    self.assertAlmostEqual(self.__strangleObj.getVega(), 0.18)
+    self.__strangleObj.setNumContracts(1)
 
-    def testStrangleUpdateValues(self):
-        """Test that the option values are updated correctly by starting with a strangle and then receiving new
-        option prices for the puts and calls.
-        """
+  def testGetVegaNoneValue(self):
+    """Tests that a value of None is returned if one of the vega is None."""
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2690, delta=0.15, vega=None,
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=7.45,
+                     askPrice=7.50, tradePrice=7.475)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2855, delta=-0.16, vega=0.05,
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=5.20,
+                        askPrice=5.40, tradePrice=5.30)
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.SELL)
+    self.assertIsNone(strangleObj.getVega())
 
-        # Create a list with two options matching the strangleObj except with different option prices.
-        tickData = []
-        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.25, askPrice=7.25,
-                         optionSymbol="01")
-        tickData.append(putOpt)
-        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.00, askPrice=5.00,
-                            optionSymbol="02")
-        tickData.append(callOpt)
+  def testGetTheta(self):
+    """Tests that theta values are summed for the strangle."""
+    self.assertAlmostEqual(self.__strangleObj.getTheta(), -0.13)
 
-        self.strangleObj.updateValues(tickData)
+  def testGetThetaMultipleContracts(self):
+    """Tests that theta values are summed for the strangle."""
+    self.__strangleObj.setNumContracts(2)
+    self.assertAlmostEqual(self.__strangleObj.getTheta(), -0.26)
+    self.__strangleObj.setNumContracts(1)
 
-        # Check that the bidPrice of the put and call options inside strangleObj have been updated.
-        __putOpt = self.strangleObj.getPutOption()
-        __callOpt = self.strangleObj.getCallOption()
-        self.assertAlmostEqual(__putOpt.getBidPrice(), 7.25)
-        self.assertAlmostEqual(__callOpt.getBidPrice(), 5.00)
+  def testGetThetaNoneValue(self):
+    """Tests that a value of None is returned if one of the theta is None."""
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2690, delta=0.15, vega=None,
+                     theta=None, dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=7.45,
+                     askPrice=7.50, tradePrice=7.475)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2855, delta=-0.16, vega=0.05,
+                        theta=-0.06, dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=5.20,
+                        askPrice=5.40, tradePrice=5.30)
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.SELL)
+    self.assertIsNone(strangleObj.getTheta())
 
-    def testStrangleManagePositionProfitTargetPercent(self):
-        """Test that strangle is set to be deleted from the portfolio if the option prices are such that the
-        desired profit target threshold has been reached.
-        """
+  def testGetGamma(self):
+    """Tests that gamma values are summed for the strangle."""
+    self.assertAlmostEqual(self.__strangleObj.getGamma(), 0.23)
 
-        # Create put and call options.
-        tickData = []
-        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=3.00, askPrice=3.00,
-                         optionSymbol="01")
-        tickData.append(putOpt)
-        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=2.00, askPrice=2.00,
-                        optionSymbol = "02")
-        tickData.append(callOpt)
+  def testGetGammaMultipleContracts(self):
+    """Tests that theta values are summed for the strangle."""
+    self.__strangleObj.setNumContracts(2)
+    self.assertAlmostEqual(self.__strangleObj.getGamma(), 0.46)
+    self.__strangleObj.setNumContracts(1)
 
-        # Update strangle with new values.
-        self.strangleObj.updateValues(tickData)
+  def testGetGammaNoneValue(self):
+    """Tests that a value of None is returned if one of the theta is None."""
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2690, delta=0.15, vega=None,
+                     theta=None, gamma=None, dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=7.45,
+                     askPrice=7.50, tradePrice=7.475)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2855, delta=-0.16, vega=0.05,
+                        theta=-0.06, gamma=0.12, dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=5.20,
+                        askPrice=5.40, tradePrice=5.30)
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.SELL)
+    self.assertIsNone(strangleObj.getGamma())
 
-        # Check if managePosition() returns true since the combined put and call prices reflect more than a 50% profit.
-        self.assertTrue(self.strangleObj.managePosition())
+  def testStrangleCalcProfitLossNoDataUpdate(self):
+    """Tests that the profit / loss is zero if we haven't updated the option."""
+    self.assertAlmostEqual(self.__strangleObj.calcProfitLoss(), decimal.Decimal(0.0))
 
-    def testStrangleManageDaysBeforeClosing(self):
-        """Test that the strangle is set to be deleted from the portfolio if the number of days until expiration is
-        less than the daysBeforeClosing threshold.
-        """
-        # Create put and call options.
-        tickData = []
+  def testStrangleCalcProfitLossWithDataUpdateSellingStrangle(self):
+    """Tests that the profit / loss is calculated correctly when new data is available."""
+    self.__strangleObj.updateValues(self.__tickData)
+    self.assertAlmostEqual(self.__strangleObj.calcProfitLoss(), decimal.Decimal(-22.5))
 
-        # Set up date / time formats.
-        local = pytz.timezone('US/Eastern')
+  def testStrangleCalcProfitLossWithDataUpdateBuyingStrangle(self):
+    """Tests that the profit / loss is calculated correctly when buying a strangle."""
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                     strikePrice=decimal.Decimal(2690),
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(7.45), askPrice=decimal.Decimal(7.50), tradePrice=decimal.Decimal(7.475))
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                        strikePrice=decimal.Decimal(2855),
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(5.20), askPrice=decimal.Decimal(5.40),
+                        tradePrice=decimal.Decimal(5.30))
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.BUY)
+    # The parameters below are used to update the prices of the initial strangle above.
+    tickData = []
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2790.0),
+                     strikePrice=decimal.Decimal(2690),
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(7.25), askPrice=decimal.Decimal(7.350))
+    tickData.append(putOpt)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2790.0),
+                        strikePrice=decimal.Decimal(2855),
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(5.60), askPrice=decimal.Decimal(5.80))
+    tickData.append(callOpt)
+    strangleObj.updateValues(tickData)
+    self.assertAlmostEqual(strangleObj.calcProfitLoss(), decimal.Decimal(22.5))
 
-        # Convert time zone of data 'US/Eastern' to UTC time.
-        expDate = datetime.datetime.strptime("02/05/18", "%m/%d/%y")
-        expDate = local.localize(expDate, is_dst=None)
-        expDate = expDate.astimezone(pytz.utc)
+  def testStrangeCalcProfitLossPercentage(self):
+    """Tests that the profit / loss percentage is calculated correctly."""
+    self.__strangleObj.updateValues(self.__tickData)
+    self.assertAlmostEqual(self.__strangleObj.calcProfitLossPercentage(), decimal.Decimal(-1.76125244618395))
 
-        # Convert time zone of data 'US/Eastern' to UTC time.
-        curDate = datetime.datetime.strptime("02/02/18", "%m/%d/%y")
-        curDate = local.localize(curDate, is_dst=None)
-        curDate = curDate.astimezone(pytz.utc)
+  def testStrangleBuyingPower25PercentRule(self):
+    # Tests the buying power calculation for the 25% rule.
+    buyingPower = self.__strangleObj.getBuyingPower()
+    self.assertAlmostEqual(buyingPower, decimal.Decimal(63309.99999999997))
 
-        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=3.00, askPrice=3.00,
-                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
-        tickData.append(putOpt)
-        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=2.00, askPrice=2.00,
-                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
-        tickData.append(callOpt)
+  def testStrangleBuyingPower15PercentRule(self):
+    # Tests the buying power calculation for the 15% rule.
+    # TODO(msantoro): Get live values from Tastyworks to use here.
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                     strikePrice=decimal.Decimal(2500), delta=0.01,
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(1.45), askPrice=decimal.Decimal(1.50), tradePrice=decimal.Decimal(1.475))
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                        strikePrice=decimal.Decimal(3200), delta=-0.01,
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(1.20), askPrice=decimal.Decimal(1.40),
+                        tradePrice=decimal.Decimal(1.30))
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.SELL)
+    buyingPower = strangleObj.getBuyingPower()
+    self.assertAlmostEqual(buyingPower, decimal.Decimal(48130.0))
 
-        daysBeforeClosing = 5
-        orderQuantity = 1
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing)
+  def testStrangleUpdateValuesNoMatchingOption(self):
+    """Tests that the profit loss calculation is unchanged if no option is available to update."""
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                     strikePrice=decimal.Decimal(2690),
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(7.45), askPrice=decimal.Decimal(7.50), tradePrice=decimal.Decimal(7.475))
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                        strikePrice=decimal.Decimal(2855),
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(5.20), askPrice=decimal.Decimal(5.40),
+                        tradePrice=decimal.Decimal(5.30))
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.BUY)
+    initialProfitLoss = strangleObj.calcProfitLoss()
 
-        # Check if managePosition() returns true since the current dateTime and DTE are less than daysBeforeClosing = 5.
-        self.assertTrue(strangleObj.managePosition())
+    tickData = []
+    # Changed the PUT strike price from 2690 to 2790 to prevent a match.
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2790.0), strikePrice=decimal.Decimal(2790),
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(7.25), askPrice=decimal.Decimal(7.350))
+    tickData.append(putOpt)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2790.0),
+                        strikePrice=decimal.Decimal(2855),
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(5.60), askPrice=decimal.Decimal(5.80))
+    tickData.append(callOpt)
+    strangleObj.updateValues(tickData)
 
-    def testStrangleCalcProfitLossPercentage(self):
+    # The profit / loss should be the same since the option wasn't updated.
+    self.assertAlmostEqual(strangleObj.calcProfitLoss(), initialProfitLoss)
 
-        # Set up date / time formats.
-        local = pytz.timezone('US/Eastern')
-
-        # Convert time zone of data 'US/Eastern' to UTC time.
-        expDate = datetime.datetime.strptime("02/05/18", "%m/%d/%y")
-        expDate = local.localize(expDate, is_dst=None)
-        expDate = expDate.astimezone(pytz.utc)
-
-        # Convert time zone of data 'US/Eastern' to UTC time.
-        curDate = datetime.datetime.strptime("02/02/18", "%m/%d/%y")
-        curDate = local.localize(curDate, is_dst=None)
-        curDate = curDate.astimezone(pytz.utc)
-
-        # Test the case where we sell a strangle and have a loss.
-        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=6.00, askPrice=6.00,
-                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
-        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=4.00, askPrice=4.00,
-                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
-
-        orderQuantity = 1
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL")
-
-        # Total credit = 5.00 or 500, and total loss is -300 + -200 = -500; (-500/500) * 100 = -100%
-        profitLossPercentage = strangleObj.calcProfitLossPercentage()
-        self.assertAlmostEqual(profitLossPercentage, -100)
-
-        # Test the case where we sell a strangle and have a profit.
-        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=1.50, askPrice=1.50,
-                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
-        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=1.00, askPrice=1.00,
-                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
-
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL")
-
-        # Total credit = 5.00 or 500, and total profit is 150 + 100 = 250; 250/500 = 0.5 * 100 = 50%
-        profitLossPercentage = strangleObj.calcProfitLossPercentage()
-        self.assertAlmostEqual(profitLossPercentage, 50)
-
-        # Test the case where we buy a strangle and have a loss.
-        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=1.50, askPrice=1.50,
-                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
-        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=1.00, askPrice=1.00,
-                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
-
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "BUY")
-
-        # Total debit = 5.00 or 500, and total loss is -150 + -100 = -250 / 500 = -0.5* 100 = -50%
-        profitLossPercentage = strangleObj.calcProfitLossPercentage()
-        self.assertAlmostEqual(profitLossPercentage, -50)
-
-        # Test the case where we buy a strangle and have a profit.
-        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=6.00, askPrice=6.00,
-                         tradePrice=3.00, optionSymbol="01", dateTime=curDate)
-        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=4.00, askPrice=4.00,
-                            tradePrice=2.00, optionSymbol="02", dateTime=curDate)
-
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "BUY")
-
-        # Total debit = 5.00 or 500, and total profit is 300 + 200 = 500 / 500 = 1 * 100 = 100%
-        profitLossPercentage = strangleObj.calcProfitLossPercentage()
-        self.assertAlmostEqual(profitLossPercentage, 100)
+  def testStrangeGetNumberOfDaysLeft(self):
+    """Tests that we calculate the number of days between two date / times correctly."""
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2690, delta=0.15, vega=None,
+                     theta=None, gamma=None, dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=7.45,
+                     askPrice=7.50, tradePrice=7.475)
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=2786.24, strikePrice=2855, delta=-0.16, vega=0.05,
+                        theta=-0.06, gamma=0.12, dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"), bidPrice=5.20,
+                        askPrice=5.40, tradePrice=5.30)
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.SELL)
+    self.assertEqual(strangleObj.getNumberOfDaysLeft(), 19)
 
 if __name__ == '__main__':
     unittest.main()
