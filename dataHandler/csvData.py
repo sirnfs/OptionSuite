@@ -1,264 +1,235 @@
-import pandas as pd
+import csv
 import datetime
-import pytz
-import sys
-import logging
-from dataHandler import DataHandler
+import decimal
+import json
+import pandas as pd
+import queue
+from dataHandler import dataHandler
 from base import call
 from base import put
+from base import option
 from events import tickEvent
+from typing import Iterable, Mapping, Text
 
-class CsvData(DataHandler):
-    """This class handles data from CSV files which will be used
-    for backtesting sessions.  The handling of the CSV file is through pandas.
+class CsvData(dataHandler.DataHandler):
+  """This class handles data from CSV files which will be used for backtesting sessions."""
+
+  def __init__(self, csvPath: Text, dataProvider: Text, eventQueue: queue.Queue) -> None:
+    """Initializes CSV data parameters for file reading.
+
+    Attributes:
+      csvPath: path to CSV file used in backtesting.
+      dataProvider:  historical data provider (e.g, provider of CSV).
+      eventQueue:  location to place new data tick event.
     """
+    self.__csvPath = csvPath
+    self.__curTimeDate = None
+    self.__dataConfig = None
+    self.__csvReader = None
+    self.__csvColumnNames = None
+    self.__dateColumnIndex = None
+    self.__nextTimeDateRow = None
+    self.__dataProvider = dataProvider
+    self.__eventQueue = eventQueue
 
-    def __init__(self, csvDir, filename, dataProvider, eventQueue, chunkSize):
-        """
-        csvDir: input CSV directory of files used in backtesting.
-        filename:  filename of CSV to process.
-        dataProvider:  historical data provider (e.g, provider of CSV).
-        eventQueue:  location to place new data tick event.
-        chunkSize:  number of rows to read from the CSV at one time.
-        """
-        self.__csvDir = csvDir
-        self.__curRow = 0
-        self.__chunkSize = chunkSize
-        self.__curTimeDate = None
-        self.__dataAvailable = False
-        self.__dataReader = None
-        self.__dataFrame = None
-        self.__dataProvider = dataProvider
-        self.__eventQueue = eventQueue
+    # Open data source. Raises exception if failure.
+    self.__dataConfig = self.__openDataSource()
 
-        # Open data source.  Raises exception if failure.
-        self.openDataSource(filename)
+  def __openDataSource(self) -> Mapping[Text, int]:
+    """Used to connect to the data source for the first time. In the case of a CSV, this means opening the file.
+    The directory used is determined during initialization.
+      :return dictionary from dataProvider.json file.
+      :raises FileNotFoundError: Cannot find a CSV at specified location.
+      :raises ValueError: Cannot load data as a JSON file.
+      :raises ValueError: Requested data provider not found in JSON file.
+      :raises ValueError: Number of CSV columns not provided in JSON file.
+      :raises ValueError: Number of columns read from CSV does not match number of columns in JSON file.
+    """
+    try:
+      fileHandle = open(self.__csvPath, 'r')
+    except OSError as e:
+      raise OSError('Unable to open CSV at location: %s.' % self.__csvPath) from e
 
-    def openDataSource(self, filename):
-        """
-        Used to connect to the data source for the first time.
-        In the case of a CSV, this means opening the file.
-        The directory used is determined during initialization.
-        
-        Args:
-        filename:  input CSV file which contains historical data.
-        """
+    # Load data provider information from dataProviders.json file.
+    try:
+      with open('./dataHandler/dataProviders.json') as dataProvider:
+        dataConfig = json.load(dataProvider)
+    except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
+      raise ValueError('Failure when trying to open / load data from JSON file: %s.' % (
+        'dataHandler/dataProviders.json')) from e
 
-        try:
-            self.__dataReader = pd.read_csv(self.__csvDir + '/' + filename, iterator=True)
-            # Get a chunk and store it in the dataFrame
-            self.__dataFrame = self.__dataReader.get_chunk(self.__chunkSize)
-        except IOError:
-            print("Unable to open data source")
-            raise
+    # Check that data provider in JSON file matches the provided string in self._dataProvider
+    if not self.__dataProvider in dataConfig:
+      raise ValueError('The requested data provider: %s was not found in dataProviders.json' % self.__dataProvider)
 
-        # Indicates to other methods that the data is now available.
-        self.__dataAvailable = True
+    # Check that the number of columns in the CSV matches the number specified by the config file.
+    self.__csvReader = csv.reader(fileHandle)
+    self.__csvColumnNames = next(self.__csvReader)
+    numberCsvColumns = len(self.__csvColumnNames)
+    if 'number_columns' not in dataConfig[self.__dataProvider]:
+      raise ValueError('number_columns not provided in dataProviders.json file')
+    if not numberCsvColumns == dataConfig[self.__dataProvider]['number_columns']:
+      raise ValueError('Number of columns read from CSV did not match the number of columns in dataProviders.json')
+    return dataConfig
 
-        # TODO: is there a function to get the table_width?
-        # Check that the CSV has the right number of columns.
-        if self.__dataProvider == "iVolatility":
-            try:
-                self.__dataReader._engine._reader.table_width == 25
-            except:
-                print("CSV did not have right number of columns")
-                raise
+  def __getOptionChain(self) -> pd.DataFrame:
+    """Used to get the option chain data for the underlying. The option chain consists of all of the puts and calls
+    at all strikes currently listed for the underlying.
+    :return Pandas dataframe with option chain data.
+    """
+    # Get the first date if self.__curTimeDate is None.
+    dateColumnName = self.__dataConfig[self.__dataProvider]['column_names']['dateTime']
+    if self.__curTimeDate is None:
+      # Find the index of the date column in the header row of the CSV.
+      for index, column in enumerate(self.__csvColumnNames):
+        if column == dateColumnName:
+          self.__dateColumnIndex = index
+      if self.__dateColumnIndex is None:
+        # TODO(msantoro): Test this error.
+        raise TypeError('The dateColumnName was not found in the CSV.')
+
+      rowList = []
+      # Get the next row of the CSV and convert the date column to a datetime object.
+      row = next(self.__csvReader)
+      rowList.append(row)
+      self.__curTimeDate = datetime.datetime.strptime(row[self.__dateColumnIndex],
+                                                      self.__dataConfig[self.__dataProvider]['date_time_format'])
+
+      # Get the rest of the rows that match the curTimeDate.
+      for row in self.__csvReader:
+        if datetime.datetime.strptime(row[self.__dateColumnIndex],
+                                      self.__dataConfig[self.__dataProvider]['date_time_format']) == self.__curTimeDate:
+          rowList.append(row)
         else:
-            print("Unknown data provider; exiting.")
-            sys.exit(1)
+          # Need to save the last row that doesn't match the curTimeDate so we can use it again.
+          self.__nextTimeDateRow = row
+          break
 
-    def getOptionChain(self):
-        """
-        Used to get the option chain data for the underlying.
-        The option chain consists of all of the puts and calls
-        at all strikes currently listed for the underlying.
-        Returns true/false depending on whether or not we successfully
-        were able to get the option chain data.  On success, the
-        the rows of the option chain are converted into option objects,
-        and the objects are put into the eventQueue as one event.
-        """
+      # Create a Pandas dataframe from the list of lists.
+      return pd.DataFrame(rowList, columns=self.__csvColumnNames)
 
-        # Attempt to get option chain from CSV -- the way we determine
-        # which strikes / data belong to the option chain for the current
-        # tick is by keeping track of the time/date.
+    else:
+      if self.__nextTimeDateRow is None:
+        return pd.DataFrame()
+      # Get the date / time from the previously stored row.
+      self.__curTimeDate = datetime.datetime.strptime(self.__nextTimeDateRow[self.__dateColumnIndex],
+                                                      self.__dataConfig[self.__dataProvider]['date_time_format'])
 
-        # Used to store all rows in current option chain.
-        optionChain = []
-
-        # Used to store objects created for each row of the option chain
-        optionChainObjs = []
-
-        # Different data providers will have to be handled differently.
-        if self.__dataProvider == "iVolatility":
-
-            # Get the first N rows with the same time/date.
-            # To do this, we get the time/data from the first row, and then
-            # we add to this any rows with the same date/time.
-
-            # Handle first row -- add to optionChain.
-            try:
-                optionChain.append(self.__dataFrame.iloc[self.__curRow])
-                self.__curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
-                self.__curRow += 1
-            except:
-                # Could not get the current row if we end up here; try chunking to get more data.
-                try:
-                    self.__dataFrame = self.__dataReader.get_chunk(self.__chunkSize)
-                    self.__curRow = 0
-                    optionChain.append(self.__dataFrame.iloc[self.__curRow])
-                    self.__curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
-                    self.__curRow += 1
-                except:
-                    return False
-
-            # TODO:  replace this while loop with something more efficient --
-            # For example, can select all dates from dataframe and then iterate
-            # through them; we would need to keep track of the curRow still so we
-            # can get the next option chain.  We do it in this manner since it
-            # seems that it would be faster if we had a HUGE CSV and tried to
-            # do a bunch of groups for different dates.
-            while 1:
-                try:
-                    curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
-                except:
-                    # Try chunking to get more data since we couldn't get current row.
-                    try:
-                        self.__dataFrame = self.__dataReader.get_chunk(self.__chunkSize)
-                        self.__curRow = 0
-                        curTimeDate = self.__dataFrame['date'].iloc[self.__curRow]
-                    except:
-                        break
-
-                if curTimeDate == self.__curTimeDate:
-                    optionChain.append(self.__dataFrame.iloc[self.__curRow])
-                    self.__curRow +=1
-                else:
-                    break
-
-            # Convert option chain to base types (calls, puts).
-            for row in optionChain:
-                currentObj = self.createBaseType(row)
-                # Make sure currentObj is not None.
-                if currentObj:
-                    optionChainObjs.append(currentObj)
-
-            # Create event and add to queue
-            event = tickEvent.TickEvent()
-            event.createEvent(optionChainObjs)
-            self.__eventQueue.put(event)
-
-            return True
-
-    def getNextTick(self):
-        """
-        Used to get the next available piece of data from the data source.
-        For the CSV example, this would likely be the next row or option chain.
-        """
-
-        # Check that data source has been opened.
-        if self.__dataAvailable:
-
-            # Get option chain and create event.
-            if self.getOptionChain():
-                return True
-            else:
-                return False
-
+      # Get all of the CSV rows for the curTimeDate.
+      rowList = []
+      rowList.append(self.__nextTimeDateRow)
+      for row in self.__csvReader:
+        if datetime.datetime.strptime(row[self.__dateColumnIndex],
+                                      self.__dataConfig[self.__dataProvider]['date_time_format']) == self.__curTimeDate:
+          rowList.append(row)
         else:
-            # No event will be created, so nothing to do here.
-            return False
+          # Need to save the last row that doesn't match the curTimeDate so we can use it again.
+          self.__nextTimeDateRow = row
+          break
 
-    def getCSVDir(self):
-        """
-        Used to get the name of the CSV directory.
-        """
-        return self.__csvDir
+      # If no rows were added above, it means that there's no more data to read from the CSV.
+      if len(rowList) == 1:
+        self.__nextTimeDateRow = None
+        return pd.DataFrame()
+      # Create a Pandas dataframe from the list of lists.
+      return pd.DataFrame(rowList, columns=self.__csvColumnNames)
 
-    def createBaseType(self, inputData):
-        """
-        Used to take a tick (e.g., row from CSV) and create a base type 
-        such as a stock or option (call or put).
-        """
-        if self.__dataProvider == "iVolatility":
-            # CSV header
-            # symbol, exchange, company_name, date, stock_price_close, option_symbol, expiration_date, strike,
-            # call_put, style, ask, bid, mean_price, settlement, iv, volume, open_interest, stock_price_for_iv,
-            # isinterpolated, delta, vega, gamma, theta, rho
+  def __createBaseType(self, optionChain: pd.DataFrame) -> Iterable[option.Option]:
+    """
+    Convert an option chain held in a dataframe to base option types (calls or puts).
 
-            # Do type checking on fields.
-            underlyingTicker = inputData['symbol']
-            exchange = inputData['exchange']
-            optionSymbol = inputData['option_symbol']
+    Attributes:
+      optionChain: Pandas dataframe with optionChain data as rows.
 
-            # Check if style is American or European.
-            style = inputData['style']
-            if style != 'A' and style != 'E':
-                return None
-
-            # Check that underlyingTicker is a character string.
-            if not underlyingTicker.isalpha():
-                return None
-
-            # Check that fields below are floating point numbers.
-            try:
-                strikePrice = float(inputData['strike'])
-                underlyingPrice = float(inputData['stock_price_close'])
-                underlyingTradePrice = underlyingPrice
-                askPrice = float(inputData['ask'])
-                bidPrice = float(inputData['bid'])
-                tradePrice = (askPrice + bidPrice) / 2
-                impliedVol = float(inputData['iv'])
-                volume = float(inputData['volume'])
-                openInterest = int(inputData['open_interest'])
-                delta = float(inputData['delta'])
-                theta = float(inputData['theta'])
-                vega = float(inputData['vega'])
-                gamma = float(inputData['gamma'])
-                rho = float(inputData['rho'])
-
-            except:
-                return None
-
-            # Convert current date and expiration date to a datetime object.
-            try:
-                local = pytz.timezone('US/Eastern')
-                # Convert time zone of data 'US/Eastern' to UTC time.
-                # Try and except here to handle two or four digit year format.
-                try:
-                    DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%y")
-                except:
-                    DTE = datetime.datetime.strptime(inputData['option_expiration'], "%m/%d/%Y")
-
-                DTE = local.localize(DTE, is_dst=None)
-                DTE = DTE.astimezone(pytz.utc)
-
-                try:
-                    curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%y")
-                except:
-                    curDateTime = datetime.datetime.strptime(inputData['date'], "%m/%d/%Y")
-
-                curDateTime = local.localize(curDateTime, is_dst=None)
-                curDateTime = curDateTime.astimezone(pytz.utc)
-            except:
-                logging.warning('Something went wrong when trying to read the option data from the CSV.')
-                return None
-
-            call_put = inputData['call/put']
-
-            if call_put == 'C':
-                return call.Call(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, underlyingTradePrice,
-                                 optionSymbol, None, bidPrice, askPrice, tradePrice, openInterest, volume, curDateTime,
-                                 theta, gamma, rho, vega, impliedVol, exchange)
-
-            elif call_put == 'P':
-                return put.Put(underlyingTicker, strikePrice, delta, DTE, None, underlyingPrice, underlyingTradePrice,
-                               optionSymbol, None, bidPrice, askPrice, tradePrice, openInterest, volume, curDateTime,
-                               theta, gamma, rho, vega, impliedVol, exchange)
-
-            else:
-                return None
-
+    :raises ValueError: Symbol for put/call in JSON not found in dataframe column.
+    :return: List of Option base type objects (puts or calls).
+    """
+    optionObjects = []
+    # Create a dictionary for the fields that we will read from each row of the dataframe. The fields should also be
+    # specified in the dataProviders.json file.
+    # Instead of manually specifying the fields below, we could read them from the Option class.
+    optionFieldDict = {'underlyingTicker': None, 'strikePrice': None, 'delta': None, 'expirationDateTime': None,
+                       'underlyingPrice': None, 'optionSymbol': None, 'bidPrice': None, 'askPrice': None,
+                       'tradePrice': None, 'openInterest': None, 'volume': None, 'dateTime': None, 'theta': None,
+                       'gamma': None, 'rho': None, 'vega': None, 'impliedVol': None, 'exchangeCode': None,
+                       'exercisePrice': None, 'assignPrice': None, 'openCost': None, 'closeCost': None,
+                      }
+    dataProviderConfig = self.__dataConfig[self.__dataProvider]
+    for _, row in optionChain.iterrows():
+      # Defaults to PUT (True).
+      putOrCall = True
+      for option_column_name, dataframe_column_name in dataProviderConfig['column_names'].items():
+        # Check that we need to look up the field.
+        if not dataframe_column_name:
+          continue
+        if option_column_name == 'optionType':
+          optionType = row[dataframe_column_name]
+          # Convert any lowercase symbols to uppercase.
+          optionType = str(optionType).upper()
+          if optionType == dataProviderConfig['call_symbol_abbreviation']:
+            putOrCall = False
+          elif optionType == dataProviderConfig['put_symbol_abbreviation']:
+            putOrCall = True
+          else:
+            raise ValueError('Symbol for put / call in dataProviders.json not found in optionType dataframe column.')
         else:
-            print("Unrecognized CSV data source provider")
-            sys.exit(1)
+          optionFieldDict[option_column_name] = row[dataframe_column_name]
 
+      if optionFieldDict['bidPrice'] is not None and optionFieldDict['askPrice'] is not None:
+        optionFieldDict['tradePrice'] = (decimal.Decimal(optionFieldDict['bidPrice']) + decimal.Decimal(
+          optionFieldDict['askPrice'])) / decimal.Decimal(2.0)
+
+      argsDict = {'underlyingTicker': optionFieldDict['underlyingTicker'],
+                  'strikePrice': decimal.Decimal(optionFieldDict['strikePrice']),
+                  'delta': float(optionFieldDict['delta']), 'expirationDateTime': datetime.datetime.strptime(
+                    optionFieldDict['expirationDateTime'], dataProviderConfig['date_time_format']),
+                  'underlyingPrice': decimal.Decimal(optionFieldDict['underlyingPrice']),
+                  'optionSymbol': optionFieldDict['optionSymbol'],
+                  'bidPrice': decimal.Decimal(optionFieldDict['bidPrice']),
+                  'askPrice': decimal.Decimal(optionFieldDict['askPrice']),
+                  'tradePrice': decimal.Decimal(optionFieldDict['tradePrice']),
+                  'openInterest': int(optionFieldDict['openInterest']), 'volume': int(optionFieldDict['volume']),
+                  'dateTime': datetime.datetime.strptime(optionFieldDict['dateTime'],
+                                                         dataProviderConfig['date_time_format']),
+                  'theta': float(optionFieldDict['theta']),
+                  'gamma': float(optionFieldDict['gamma']), 'rho': float(optionFieldDict['rho']),
+                  'vega': float(optionFieldDict['vega']), 'impliedVol': float(optionFieldDict['impliedVol']),
+                  'exchangeCode': optionFieldDict['exchangeCode'],
+                  'exercisePrice': decimal.Decimal(optionFieldDict['exercisePrice']) if
+                    optionFieldDict['exercisePrice'] else None,
+                  'assignPrice': decimal.Decimal(optionFieldDict['assignPrice']) if optionFieldDict[
+                    'assignPrice'] else None,
+                  'openCost': decimal.Decimal(optionFieldDict['openCost']) if optionFieldDict[
+                    'openCost'] else None,
+                  'closeCost': decimal.Decimal(optionFieldDict['closeCost']) if optionFieldDict[
+                    'closeCost'] else None,
+                  }
+      if not putOrCall:
+        optionObjects.append(call.Call(**argsDict))
+      else:
+        optionObjects.append(put.Put(**argsDict))
+
+      # Reset all the dictionary values back to None. This is probably overkill since we can just rewrite them.
+      optionFieldDict = optionFieldDict.fromkeys(optionFieldDict, None)
+    return optionObjects
+
+  def getNextTick(self) -> bool:
+    """Used to get the next available piece of data from the data source. For the CSV example, this would likely be the
+    next row for a stock or group of rows for an option chain.
+    :return True / False indicating if there is data available.
+    """
+    if self.__dataConfig[self.__dataProvider]['data_source_type'] == 'options':
+      # Get optionChain as a dataframe.
+      optionChain = self.__getOptionChain()
+      if len(optionChain.index) == 0:
+        # No more data available.
+        return False
+      # Convert optionChain from a dataframe to Option class objects.
+      optionChainObjs = self.__createBaseType(optionChain)
+      # Create tick event with option chain objects.
+      event = tickEvent.TickEvent()
+      event.createEvent(optionChainObjs)
+      self.__eventQueue.put(event)
+      return True
+    elif self.__dataConfig[self.__dataProvider]['data_source_type'] == 'stocks':
+      pass

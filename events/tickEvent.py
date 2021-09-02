@@ -1,29 +1,19 @@
-from event import EventHandler
+from events import event
+from typing import Any, Iterable
 
-class TickEvent(EventHandler):
-    """This class handles the events for new incoming data
-    whether it be from historical data or a new tick from a live trading
-    session.
+class TickEvent(event.EventHandler):
+  """This class handles the events for new incoming data whether it be from historical data or from live trading."""
+
+  def __init__(self) -> None:
+    self.__data = None
+    self.type = event.EventTypes.TICK
+
+  def getData(self) -> Iterable[Any]:
+    return self.__data
+
+  def createEvent(self, data: Iterable[Any]) -> None:
+    """Create a tick event.
+      Attributes:
+        data: input data for the event. e.g., row of CSV data.
     """
-
-    def __init__(self):
-        self.__data = None
-        self.type = 'TICK'
-
-    def getData(self):
-        return self.__data
-
-    def createEvent(self, data):
-        """
-        Attributes:
-            data: input data for the event. e.g., row of CSV data.
-            
-        Create a data tick event.
-        """
-        self.__data = data
-
-    def deleteEvent(self):
-        """
-        Delete an event from one of the data handlers.
-        """
-        pass
+    self.__data = data

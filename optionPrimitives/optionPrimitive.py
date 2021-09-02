@@ -1,70 +1,65 @@
-from abc import ABCMeta, abstractmethod
+import abc
+import decimal
+import enum
+from base import option
+from typing import Iterable
 
-class OptionPrimitive(object):
-    """This class is a generic type for any primitive that can be made using
-       a PUT or CALL option and/or stock, e.g., iron condor or strangle.
+class TransactionType(enum.Enum):
+  BUY = 0
+  SELL = 1
+
+class OptionPrimitive(abc.ABC):
+  """This class is a generic type for any primitive that can be made using a PUT or CALL option and/or stock,
+     e.g., iron condor or strangle.
+  """
+
+  @abc.abstractmethod
+  def getBuyingPower(self) -> decimal.Decimal:
+    """Used to calculate the buying power needed for the option primitive."""
+    pass
+
+  @abc.abstractmethod
+  def getDelta(self) -> float:
+    """Used to get the delta for the option primitive."""
+    pass
+
+  @abc.abstractmethod
+  def getVega(self) -> float:
+    """Used to get the vega for the option primitive."""
+    pass
+
+  @abc.abstractmethod
+  def getTheta(self) -> float:
+    """Used to get the theta for the option primitive."""
+    pass
+
+  @abc.abstractmethod
+  def getGamma(self) -> float:
+    """Used to get the gamma for the option primitive."""
+    pass
+
+  @abc.abstractmethod
+  def calcProfitLoss(self) -> decimal.Decimal:
+    """Calculate the profit and loss for the option primitive based on option values when the trade was placed and new
+     option values.
+
+    :return: Profit / loss (positive decimal for profit, negative decimal for loss).
     """
-    __metaclass__ = ABCMeta
+    pass
 
-    @abstractmethod
-    def getUnderlyingTicker(self):
-        """Get the name (string) of the underlying being used for the option primitive.
-        """
-        pass
+  @abc.abstractmethod
+  def calcProfitLossPercentage(self) -> float:
+    """Calculate the profit and loss for the option primitive based on option values when the trade was placed and new
+     option values.
 
-    @abstractmethod
-    def getBuyingPower(self):
-        """Used to calculate the buying power needed for the
-        option primitive.
-        """
-        pass
+    :return: Profit / loss as a percentage of the initial option prices. Returns negative percentage for a loss.
+    """
+    pass
 
-    @abstractmethod
-    def getDelta(self):
-        """Used to get the delta for the option primitive.
-        """
-        pass
-
-    @abstractmethod
-    def getVega(self):
-        """Used to get the vega for the option primitive.
-        """
-        pass
-
-    @abstractmethod
-    def getTheta(self):
-        """Used to get the theta for the option primitive.
-        """
-        pass
-
-    @abstractmethod
-    def getGamma(self):
-        """Used to get the gamma for the option primitive.
-        """
-        pass
-
-    @abstractmethod
-    def calcProfitLoss(self):
-        """Calculate the profit and loss for the option primitive based on option values when the trade
-        was placed and new option values.
-
-        :return: Profit / loss (positive decimal for profit, negative decimal for loss).
-        """
-        pass
-
-    @abstractmethod
-    def calcProfitLossPercentage(self):
-        """Calculate the profit and loss for the option primitive based on option values when the trade
-        was placed and new option values.
-
-        :return: Profit / loss as a percentage of the initial option prices.  Returns negative percentage for a loss.
-        """
-        pass
-
-    @abstractmethod
-    def updateValues(self, tickData):
-        """Based on the latest pricing data, update the option values.
-        :param tickData: option chain with pricing information.
-        :return True if we were able to update values, false otherwise.
-        """
-        pass
+  @abc.abstractmethod
+  def updateValues(self, tickData: Iterable[option.Option]) -> bool:
+    """Based on the latest pricing data, update the option values.
+    :param tickData: option chain with pricing information.
+    :return True if we were able to update values, false otherwise.
+    """
+    pass
