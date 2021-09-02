@@ -7,7 +7,6 @@ __pycache__/
 *$py.class
 
 # CSV files and doc files used for backtesting
-*.csv
 *.doc
 
 # C extensions
@@ -106,5 +105,4 @@ ENV/
 /site
 
 # Ignore specific files
-combineCSVs.py
-plotStats.py
+/marketData
