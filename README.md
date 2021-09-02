@@ -54,8 +54,7 @@ Once you have downloaded the data, simply update the three lines below, and you 
 
 ```
 dataProvider = 'iVolatility'
-directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX'
-filename = 'combinedCSV.csv'
+filename = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/combinedCSV.csv'
 ```
 
 ## Visualizing the Data
