@@ -1,20 +1,13 @@
+import datetime
 import unittest
-import option
+from base import option
 
 class TestOptionsClass(unittest.TestCase):
-    def testOptionClassCreation(self):
 
-        # Below we test if an exception is thrown when try to instantiate the class.
-        # We should not be able to instantiate the Option class.
-        # TODO: This should be redone to use an assert failure.
-        failed = False
-        try:
-            classObj = option.Option('SPY', 250, 'PUT', 0.3, 45)
-        except NotImplementedError:
-            failed = True
-
-        # This should pass if an exception is raised above
-        self.assertEqual(failed, True)
+  def testOptionClassCreation(self):
+    """Tests than an exception is raised when class is instantiated."""
+    with self.assertRaisesRegex(TypeError, "Cannot instantiate abstract class."):
+      option.Option(underlyingTicker='SPY', strikePrice=250, delta=0.3, expirationDateTime=datetime.datetime.now())
 
 if __name__ == '__main__':
     unittest.main()

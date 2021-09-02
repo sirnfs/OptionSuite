@@ -1,271 +1,148 @@
 import unittest
-import portfolio
-from optionPrimitives import strangle
+import datetime
+import decimal
+from portfolioManager import portfolio
+from optionPrimitives import optionPrimitive, strangle
 from base import put
 from base import call
-from events import signalEvent
-from events import tickEvent
-from dataHandler import csvData
-import Queue as queue
-import datetime
-import pytz
+from events import signalEvent, tickEvent
+from riskManagement import strangleRiskManagement
 
 class TestPortfolio(unittest.TestCase):
 
-    def setUp(self):
-        """
-        Create portfolio object to be used for the remainder of UTs.
-        """
-        self.startingCapital = 1000000
-        self.maxCapitalToUse = 0.5
-        self.maxCapitalToUsePerTrade = 0.5
-        self.portfolioObj = portfolio.Portfolio(self.startingCapital, self.maxCapitalToUse,
-                                                self.maxCapitalToUsePerTrade)
+  def setUp(self):
+    """Create portfolio object to be shared among tests."""
+    startingCapital = decimal.Decimal(1000000)
+    maxCapitalToUse = 0.5
+    maxCapitalToUsePerTrade = 0.5
+    self.portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
 
-    def testPortfolioClassCreation(self):
+    # Strangle object to be shared among tests.
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                     strikePrice=decimal.Decimal(2690), delta=-0.16, gamma=0.01, theta=0.02, vega=0.03,
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(7.45), askPrice=decimal.Decimal(7.50), tradePrice=decimal.Decimal(7.475))
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                        strikePrice=decimal.Decimal(2855), delta=0.16, gamma=0.01, theta=0.02, vega=0.03,
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(5.20), askPrice=decimal.Decimal(5.40),
+                        tradePrice=decimal.Decimal(5.30))
+    self.strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                         buyOrSell=optionPrimitive.TransactionType.SELL)
+    self.riskManagement = strangleRiskManagement.StrangleRiskManagement(
+      strangleRiskManagement.StrangleManagementStrategyTypes.HOLD_TO_EXPIRATION)
 
-        # Check that initial netLiq is the same as the starting capital.
-        self.assertEqual(self.portfolioObj.getNetLiq(), self.startingCapital)
+  def testOnSignalSucess(self):
+    """Tests that onSignal event successfully updates portfolio."""
+    # Create signal event.
+    event = signalEvent.SignalEvent()
+    event.createEvent([self.strangleObj, self.riskManagement])
 
-        # Check that the initial buying power being used is zero.
-        self.assertEqual(self.portfolioObj.getTotalBuyingPower(), 0)
+    # Test portfolio onSignal event.
+    self.portfolioObj.onSignal(event)
 
-    def testOnSignal(self):
+    # Check that positions array in portfolio is not empty.
+    self.assertNotEqual(len(self.portfolioObj.activePositions), 0)
 
-        # Create a strangle.
-        putOpt = put.Put('SPX', 2690, 0.16, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45)
-        # Create CALL option.
-        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20)
+    # Check that the buying power used by the strangle is correct.
+    self.assertAlmostEqual(self.portfolioObj.totalBuyingPower, decimal.Decimal(63310.0))
 
-        # Create Strangle.
-        orderQuantity = 1
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL")
+    # Get the total delta value of the portfolio and check that it is 0.01.
+    self.assertAlmostEqual(self.portfolioObj.totalDelta, 0.0)
 
-        # Create signal event.
-        event = signalEvent.SignalEvent()
-        event.createEvent(strangleObj)
+  def testOnSignalNotEnoughBuyingPower(self):
+    """Tests that total buying power is not updated if there's not enough buying power."""
+    startingCapital = decimal.Decimal(100000)
+    maxCapitalToUse = 0.1
+    maxCapitalToUsePerTrade = 0.1
+    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
 
-        # Test portfolio onSignal event.
-        self.portfolioObj.onSignal(event)
+    event = signalEvent.SignalEvent()
+    event.createEvent([self.strangleObj, self.riskManagement])
+    portfolioObj.onSignal(event)
 
-        # Check that positions array in portfolio is not empty.
-        positions = self.portfolioObj.getPositions()
-        self.assertNotEqual(len(positions), 0)
+  def testUpdatePortfolio(self):
+    """Tests the ability to update option values for a position in the portfolio."""
+    # Create strangle event.
+    event = signalEvent.SignalEvent()
+    event.createEvent([self.strangleObj, self.riskManagement])
 
-        # Check that the buying power used by the strangle is correct.
-        self.assertAlmostEqual(self.portfolioObj.getTotalBuyingPower(), 64045.0)
+    # Create portfolio onSignal event, which adds the position to the portfolio.
+    startingCapital = decimal.Decimal(1000000)
+    maxCapitalToUse = 0.5
+    maxCapitalToUsePerTrade = 0.5
+    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
+    portfolioObj.onSignal(event)
 
-        # Get the total delta value of the portfolio and check that it is 0.01.
-        self.assertAlmostEqual(self.portfolioObj.getDelta(), 0.01)
+    # Next, create a strangle with the next days prices and update the portfolio values.
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                     strikePrice=decimal.Decimal(2690), delta=-0.16, gamma=0.01, theta=0.02, vega=0.03,
+                     dateTime=datetime.datetime.strptime('01/02/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(6.45), askPrice=decimal.Decimal(6.50), tradePrice=decimal.Decimal(6.475))
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
+                        strikePrice=decimal.Decimal(2855), delta=0.16, gamma=0.01, theta=0.02, vega=0.03,
+                        dateTime=datetime.datetime.strptime('01/02/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/20/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(4.20), askPrice=decimal.Decimal(4.40),
+                        tradePrice=decimal.Decimal(4.30))
 
-    def testUpdatePortfolio(self):
-        """Test the ability to update option values for a position in the portfolio.
-        """
-        startingCapital = 1000000
-        maxCapitalToUse = 0.5
-        maxCapitalToUsePerTrade = 0.5
-        portfolioObj = portfolio.Portfolio(self.startingCapital, self.maxCapitalToUse,
-                                                self.maxCapitalToUsePerTrade)
+    # Create tick event and update portfolio values.
+    testOptionChain = [callOpt, putOpt]
+    event = tickEvent.TickEvent()
+    event.createEvent(testOptionChain)
+    portfolioObj.updatePortfolio(event)
 
-        # Get an option chain from the CSV.
-        # Create CsvData class object.
-        dataProvider = 'iVolatility'
-        directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/SPX_2011_2017'
-        filename = 'RawIV_5day_sample.csv'
-        chunkSize = 10000
-        eventQueue = queue.Queue()
-        csvObj = csvData.CsvData(directory, filename, dataProvider, eventQueue, chunkSize)
+    # Check that the new portfolio values are correct (e.g., buying power, total delta, total gamma, etc).
+    self.assertAlmostEqual(portfolioObj.totalBuyingPower, decimal.Decimal(63310.0))
+    self.assertAlmostEqual(portfolioObj.totalVega, 0.06)
+    self.assertAlmostEqual(portfolioObj.totalDelta, 0.0)
+    self.assertAlmostEqual(portfolioObj.totalGamma, 0.02)
+    self.assertAlmostEqual(portfolioObj.totalTheta, 0.04)
+    self.assertAlmostEqual(portfolioObj.netLiquidity, decimal.Decimal(1000200.0))
 
-        # Get the first option chain.
-        firstOptionChainValid = csvObj.getOptionChain()
-        queueObj = eventQueue.get(False)
-        firstOptionChainData = queueObj.getData()
+  def testUpdatePortfolioRiskManagementHoldToExpiration(self):
+    """Tests that the position is removed from the portfolio when expiration occurs."""
+    # Create a new position in addition to the default self.strangleObj position.
+    startingCapital = decimal.Decimal(1000000)
+    maxCapitalToUse = 0.5
+    maxCapitalToUsePerTrade = 0.25
+    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
 
-        # Choose two of the options in the first option chain to create a strangle; using first expiration.
-        putObj = firstOptionChainData[217] # -0.172245 delta put
-        callObj = firstOptionChainData[248] # 0.154042 delta call
+    # Add first position to the portfolio
+    event = signalEvent.SignalEvent()
+    event.createEvent([self.strangleObj, self.riskManagement])
+    portfolioObj.onSignal(event)
 
-        # Create strangle an add to portfolio.
-        orderQuantity = 1
-        strangleObj = strangle.Strangle(orderQuantity, callObj, putObj, "SELL")
+    putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2800.00),
+                     strikePrice=decimal.Decimal(2700), delta=-0.16, gamma=0.01, theta=0.02, vega=0.03,
+                     dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     expirationDateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                     bidPrice=decimal.Decimal(8.00), askPrice=decimal.Decimal(8.50), tradePrice=decimal.Decimal(8.25))
+    callOpt = call.Call(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2800.00),
+                        strikePrice=decimal.Decimal(3000), delta=0.16, gamma=0.01, theta=0.02, vega=0.03,
+                        dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        expirationDateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),
+                        bidPrice=decimal.Decimal(6.00), askPrice=decimal.Decimal(6.50),
+                        tradePrice=decimal.Decimal(6.25))
+    strangleObj = strangle.Strangle(orderQuantity=1, callOpt=callOpt, putOpt=putOpt,
+                                    buyOrSell=optionPrimitive.TransactionType.SELL)
 
-        # Create signal event.
-        event = signalEvent.SignalEvent()
-        event.createEvent(strangleObj)
+    # Add second position to the portfolio.
+    event = signalEvent.SignalEvent()
+    event.createEvent([strangleObj, self.riskManagement])
+    portfolioObj.onSignal(event)
 
-        # Create portfolio onSignal event, which adds the position to the portfolio.
-        portfolioObj.onSignal(event)
+    # Update the portfolio, which should remove the second event. We do not change the prices of the putOpt or callOpt.
+    testOptionChain = [callOpt, putOpt]
+    event = tickEvent.TickEvent()
+    event.createEvent(testOptionChain)
+    portfolioObj.updatePortfolio(event)
+    # Only one position should be left in the portfolio after removing the expired position.
+    self.assertEqual(len(portfolioObj.activePositions), 1)
 
-        # Next, get the prices for the next day (1/4/11) and update the portfolio values.
-        newOptionChainValid = csvObj.getOptionChain()
-        tickEvent = eventQueue.get(False)
-
-        # Update portfolio values.
-        portfolioObj.updatePortfolio(tickEvent)
-
-        # Check that the new portfolio values are correct (e.g., buying power, total delta, total gamma, etc).
-        self.assertAlmostEqual(portfolioObj.getTotalBuyingPower(), 28950.0)
-        self.assertAlmostEqual(portfolioObj.getVega(), 1.303171)
-        self.assertAlmostEqual(portfolioObj.getDelta(), -0.018826)
-        self.assertAlmostEqual(portfolioObj.getGamma(), 0.012173)
-        self.assertAlmostEqual(portfolioObj.getTheta(), -0.583284)
-        self.assertAlmostEqual(portfolioObj.getNetLiq(), 1000060.0)
-
-    def testPortfolioPositionRemoveManagement(self):
-        """Test that we can remove a managed position from the portfolio without affecting any of the other positions
-        in the portfolio.
-        """
-
-        # Create portfolio object.
-        portfolioObj = portfolio.Portfolio(self.startingCapital, self.maxCapitalToUse,
-                                           self.maxCapitalToUsePerTrade)
-
-        # Add first position to the portfolio.
-        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
-                         optionSymbol="01", tradePrice=7.45)
-        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
-                            optionSymbol="02", tradePrice=5.20)
-
-        # Create Strangle.
-        orderQuantity = 1
-        profitTargetPercent = 0.5
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", profitTargetPercent=profitTargetPercent)
-
-        # Create signal event.
-        event = signalEvent.SignalEvent()
-        event.createEvent(strangleObj)
-
-        # Create portfolio onSignal event, which adds the position to the portfolio.
-        portfolioObj.onSignal(event)
-
-        # Add second position to the portfolio.
-        putOpt = put.Put('AAPL', 140, 0.15, 34, underlyingPrice=150, bidPrice=5.15, askPrice=5.15,
-                         optionSymbol="03", tradePrice=5.15)
-        callOpt = call.Call('APPL', 160, -0.15, 34, underlyingPrice=150, bidPrice=3.20, askPrice=3.20,
-                            optionSymbol="04", tradePrice=3.20)
-
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", profitTargetPercent=profitTargetPercent)
-
-        # Create signal event.
-        event = signalEvent.SignalEvent()
-        event.createEvent(strangleObj)
-
-        # Create portfolio onSignal event, which adds the position to the portfolio.
-        portfolioObj.onSignal(event)
-
-        # Add a third position to the portfolio.
-        putOpt = put.Put('SPY', 240, 0.15, 34, underlyingPrice=280, bidPrice=4.15, askPrice=4.15,
-                         optionSymbol="05", tradePrice=4.15)
-        callOpt = call.Call('SPY', 300, -0.15, 34, underlyingPrice=280, bidPrice=2.20, askPrice=2.20,
-                            optionSymbol="06", tradePrice=2.20)
-
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", profitTargetPercent=profitTargetPercent)
-
-        # Create signal event.
-        event = signalEvent.SignalEvent()
-        event.createEvent(strangleObj)
-
-        # Create portfolio onSignal event, which adds the position to the portfolio.
-        portfolioObj.onSignal(event)
-
-        # For the second position in the portfolio, make the option prices less than 50% of the trade price, which
-        # should cause the position to be closed / deleted from the portfolio.
-        newOptionObjs = []
-        putOpt = put.Put('SPX', 2690, 0.15, 34, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
-                         optionSymbol="01", tradePrice=7.45)
-        newOptionObjs.append(putOpt)
-        callOpt = call.Call('SPX', 2855, -0.15, 34, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
-                            optionSymbol="02", tradePrice=5.20)
-        newOptionObjs.append(callOpt)
-        putOpt = put.Put('AAPL', 140, 0.15, 34, underlyingPrice=150, bidPrice=2.15, askPrice=2.15,
-                         optionSymbol="03")
-        newOptionObjs.append(putOpt)
-        callOpt = call.Call('APPL', 160, -0.15, 34, underlyingPrice=150, bidPrice=1.20, askPrice=1.20,
-                            optionSymbol="04")
-        newOptionObjs.append(callOpt)
-        putOpt = put.Put('SPY', 240, 0.15, 34, underlyingPrice=280, bidPrice=4.15, askPrice=4.15,
-                         optionSymbol="05", tradePrice=4.15)
-        newOptionObjs.append(putOpt)
-        callOpt = call.Call('SPY', 300, -0.15, 34, underlyingPrice=280, bidPrice=2.20, askPrice=2.20,
-                            optionSymbol="06", tradePrice=2.20)
-        newOptionObjs.append(callOpt)
-
-        newEvent = tickEvent.TickEvent()
-        newEvent.createEvent(newOptionObjs)
-        portfolioObj.updatePortfolio(newEvent)
-
-        # Check that the first position is the SPX position, and the second position is the SPY position, i.e., the
-        # AAPL position should have been managed / removed.
-        positions = portfolioObj.getPositions()
-        callPos0 = positions[0].getCallOption()
-        callPos1 = positions[1].getCallOption()
-
-        self.assertEqual(callPos0.getUnderlyingTicker(), 'SPX')
-        self.assertEqual(callPos1.getUnderlyingTicker(), 'SPY')
-        self.assertEqual(len(positions), 2)
-
-    def testPortfolioWithExpirationManagement(self):
-        """Put on a strangle; update portfolio values, and then manage the strangle when the daysBeforeClosing
-        threshold has been met.
-        """
-        # Create portfolio object.
-        portfolioObj = portfolio.Portfolio(self.startingCapital, self.maxCapitalToUse,
-                                           self.maxCapitalToUsePerTrade)
-
-        # Set up date / time formats.
-        local = pytz.timezone('US/Eastern')
-
-        # Convert time zone of data 'US/Eastern' to UTC time.
-        expDate = datetime.datetime.strptime("02/20/18", "%m/%d/%y")
-        expDate = local.localize(expDate, is_dst=None)
-        expDate = expDate.astimezone(pytz.utc)
-
-        # Convert time zone of data 'US/Eastern' to UTC time.
-        curDate = datetime.datetime.strptime("02/02/18", "%m/%d/%y")
-        curDate = local.localize(curDate, is_dst=None)
-        curDate = curDate.astimezone(pytz.utc)
-
-        # Add first position to the portfolio.
-        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
-                         optionSymbol="01", tradePrice=7.45, dateTime=curDate)
-        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
-                            optionSymbol="02", tradePrice=5.20, dateTime=curDate)
-
-        # Create Strangle.
-        orderQuantity = 1
-        daysBeforeClosing = 5
-        strangleObj = strangle.Strangle(orderQuantity, callOpt, putOpt, "SELL", daysBeforeClosing)
-
-        # Create signal event.
-        event = signalEvent.SignalEvent()
-        event.createEvent(strangleObj)
-
-        # Create portfolio onSignal event, which adds the position to the portfolio.
-        portfolioObj.onSignal(event)
-
-        # Check that the position was added to the portfolio.
-        self.assertEqual(len(portfolioObj.getPositions()), 1)
-
-        # Change the time to be within five days from the DTE, which should cause the position to be closed / deleted
-        # from the portfolio.
-        curDate = datetime.datetime.strptime("02/19/18", "%m/%d/%y")
-        curDate = local.localize(curDate, is_dst=None)
-        curDate = curDate.astimezone(pytz.utc)
-
-        newOptionObjs = []
-        putOpt = put.Put('SPX', 2690, 0.15, expDate, underlyingPrice=2786.24, bidPrice=7.45, askPrice=7.45,
-                         optionSymbol="01", tradePrice=7.45, dateTime=curDate)
-        newOptionObjs.append(putOpt)
-        callOpt = call.Call('SPX', 2855, -0.15, expDate, underlyingPrice=2786.24, bidPrice=5.20, askPrice=5.20,
-                            optionSymbol="02", tradePrice=5.20, dateTime=curDate)
-        newOptionObjs.append(callOpt)
-
-        newEvent = tickEvent.TickEvent()
-        newEvent.createEvent(newOptionObjs)
-        portfolioObj.updatePortfolio(newEvent)
-
-        # Check that the position was managed / deleted from the portfolio.
-        self.assertEqual(len(portfolioObj.getPositions()), 0)
 
 if __name__ == '__main__':
     unittest.main()
