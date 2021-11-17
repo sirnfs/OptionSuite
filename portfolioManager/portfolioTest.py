@@ -1,6 +1,7 @@
 import unittest
 import datetime
 import decimal
+import json
 from portfolioManager import portfolio
 from optionPrimitives import optionPrimitive, strangle
 from base import put
@@ -12,10 +13,6 @@ class TestPortfolio(unittest.TestCase):
 
   def setUp(self):
     """Create portfolio object to be shared among tests."""
-    startingCapital = decimal.Decimal(1000000)
-    maxCapitalToUse = 0.5
-    maxCapitalToUsePerTrade = 0.5
-    self.portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
 
     # Strangle object to be shared among tests.
     putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
@@ -34,6 +31,17 @@ class TestPortfolio(unittest.TestCase):
     self.riskManagement = strangleRiskManagement.StrangleRiskManagement(
       strangleRiskManagement.StrangleManagementStrategyTypes.HOLD_TO_EXPIRATION)
 
+    # Load the JSON config for calculating commissions and fees. Test with Tastyworks as the brokerage.
+    self.pricingSourceConfigFile = './dataHandler/pricingConfig.json'
+    self.pricingSource = 'tastyworks'
+
+    startingCapital = decimal.Decimal(1000000)
+    maxCapitalToUse = 0.5
+    maxCapitalToUsePerTrade = 0.5
+    self.portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade,
+                                            pricingSource=self.pricingSource,
+                                            pricingSourceConfigFile=self.pricingSourceConfigFile)
+
   def testOnSignalSucess(self):
     """Tests that onSignal event successfully updates portfolio."""
     # Create signal event.
@@ -47,7 +55,7 @@ class TestPortfolio(unittest.TestCase):
     self.assertNotEqual(len(self.portfolioObj.activePositions), 0)
 
     # Check that the buying power used by the strangle is correct.
-    self.assertAlmostEqual(self.portfolioObj.totalBuyingPower, decimal.Decimal(63310.0))
+    self.assertAlmostEqual(self.portfolioObj.totalBuyingPower, decimal.Decimal(63311.5427))
 
     # Get the total delta value of the portfolio and check that it is 0.01.
     self.assertAlmostEqual(self.portfolioObj.totalDelta, 0.0)
@@ -57,7 +65,9 @@ class TestPortfolio(unittest.TestCase):
     startingCapital = decimal.Decimal(100000)
     maxCapitalToUse = 0.1
     maxCapitalToUsePerTrade = 0.1
-    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
+    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade,
+                                       pricingSource=self.pricingSource,
+                                       pricingSourceConfigFile=self.pricingSourceConfigFile)
 
     event = signalEvent.SignalEvent()
     event.createEvent([self.strangleObj, self.riskManagement])
@@ -73,7 +83,9 @@ class TestPortfolio(unittest.TestCase):
     startingCapital = decimal.Decimal(1000000)
     maxCapitalToUse = 0.5
     maxCapitalToUsePerTrade = 0.5
-    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
+    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade,
+                                       pricingSource=self.pricingSource,
+                                       pricingSourceConfigFile=self.pricingSourceConfigFile)
     portfolioObj.onSignal(event)
 
     # Next, create a strangle with the next days prices and update the portfolio values.
@@ -96,12 +108,12 @@ class TestPortfolio(unittest.TestCase):
     portfolioObj.updatePortfolio(event)
 
     # Check that the new portfolio values are correct (e.g., buying power, total delta, total gamma, etc).
-    self.assertAlmostEqual(portfolioObj.totalBuyingPower, decimal.Decimal(63310.0))
+    self.assertAlmostEqual(portfolioObj.totalBuyingPower, decimal.Decimal(63210.0))
     self.assertAlmostEqual(portfolioObj.totalVega, 0.06)
     self.assertAlmostEqual(portfolioObj.totalDelta, 0.0)
     self.assertAlmostEqual(portfolioObj.totalGamma, 0.02)
     self.assertAlmostEqual(portfolioObj.totalTheta, 0.04)
-    self.assertAlmostEqual(portfolioObj.netLiquidity, decimal.Decimal(1000200.0))
+    self.assertAlmostEqual(portfolioObj.netLiquidity, decimal.Decimal(1000198.4573))
 
   def testUpdatePortfolioRiskManagementHoldToExpiration(self):
     """Tests that the position is removed from the portfolio when expiration occurs."""
@@ -109,7 +121,9 @@ class TestPortfolio(unittest.TestCase):
     startingCapital = decimal.Decimal(1000000)
     maxCapitalToUse = 0.5
     maxCapitalToUsePerTrade = 0.25
-    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade)
+    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade,
+                                       pricingSource=self.pricingSource,
+                                       pricingSourceConfigFile=self.pricingSourceConfigFile)
 
     # Add first position to the portfolio
     event = signalEvent.SignalEvent()
