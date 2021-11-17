@@ -25,7 +25,8 @@ class Option(abc.ABC):
       tradePrice:  price of option when trade was executed / put on.
       openInterest:  number of open option contracts.
       volume:  number of contracts traded.
-      dateTime:  data / time of quote received; would also be date / time bought / sold.
+      dateTime:  date / time of last updated option chain.
+      tradeDateTime: data/time that option was added.
       delta:  greek for quantifying percent of stock we're long or short (-1 to 1).
       theta:  daily return in dollars if no movement in underlying price.
       gamma:  describes rate of change of delta (float).
@@ -49,6 +50,7 @@ class Option(abc.ABC):
   openInterest: Optional[int] = None
   volume: Optional[int] = None
   dateTime: Optional[datetime.datetime] = None
+  tradeDateTime: Optional[datetime.datetime] = None
   delta: Optional[float] = None
   theta: Optional[float] = None
   gamma: Optional[float] = None
@@ -80,13 +82,16 @@ class Option(abc.ABC):
     """
     return (self.expirationDateTime - self.dateTime).days
 
+  def getMidPrice(self) -> decimal.Decimal:
+    """Calculate the mid price for the option."""
+    return (self.bidPrice + self.askPrice) / decimal.Decimal(2.0)
+
   def updateOption(self, updatedOption: 'Option') -> None:
     """Update the relevant values of the original option with those of the new option; e.g., update price, delta.
       :param updatedOption: new option from the latest tick.
       :raises ValueError: option cannot be updated.
     """
     # Check that we are dealing with the same option.
-    # TODO(easier to check option symbol)?
     if self.underlyingTicker == updatedOption.underlyingTicker and self.strikePrice == updatedOption.strikePrice and (
       self.expirationDateTime == updatedOption.expirationDateTime):
       self.underlyingPrice = updatedOption.underlyingPrice

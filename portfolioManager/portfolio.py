@@ -1,5 +1,6 @@
 import dataclasses
 import decimal
+import json
 import logging
 import typing
 from events import signalEvent, tickEvent
@@ -15,6 +16,9 @@ class Portfolio(object):
     startingCapital -- How much capital we have when starting.
     maxCapitalToUse -- Max percent of portfolio to use (decimal between 0 and 1).
     maxCapitalToUsePerTrade -- Max percent of portfolio to use on one trade (same underlying), 0 to 1.
+    positionMonitoring -- Used to keep track of portfolio values over time.
+    pricingSource -- Used to indicate which brokerage to use for commissions / fees.
+    pricingSourceConfig -- File path to the JSON config file for commission / fees.
 
   Portfolio intrinsics:
     realizedCapital:  Updated when positions are actually closed.
@@ -33,6 +37,9 @@ class Portfolio(object):
   startingCapital: decimal.Decimal
   maxCapitalToUse: float
   maxCapitalToUsePerTrade: float
+  positionMonitoring: typing.Optional[typing.DefaultDict[typing.Text, list]] = None
+  pricingSource: typing.Optional[typing.Text] = None
+  pricingSourceConfigFile: typing.Optional[typing.Text] = None
   realizedCapital: typing.ClassVar[decimal.Decimal]
   netLiquidity: typing.ClassVar[decimal.Decimal]
   totalBuyingPower: typing.ClassVar[decimal.Decimal] = decimal.Decimal(0.0)
@@ -44,12 +51,20 @@ class Portfolio(object):
   totalVega: typing.ClassVar[float] = 0.0
   totalTheta: typing.ClassVar[float] = 0.0
   totalGamma: typing.ClassVar[float] = 0.0
+  totalNumberContracts: typing.ClassVar[int] = 0
   activePositions: typing.ClassVar[list] = []
 
   def __post_init__(self):
     self.realizedCapital = self.startingCapital
     self.netLiquidity = self.startingCapital
     self.activePositions = []
+
+    # Open JSON file and select the pricingSource.
+    self.pricingSourceConfig = None
+    if self.pricingSource is not None and self.pricingSourceConfigFile is not None:
+      with open(self.pricingSourceConfigFile) as config:
+        fullConfig = json.load(config)
+        self.pricingSourceConfig = fullConfig[self.pricingSource]
 
   def onSignal(self, event: signalEvent) -> None:
     """Handle a new signal event; indicates that a new position should be added to the portfolio if portfolio risk
@@ -69,8 +84,11 @@ class Portfolio(object):
     # Determine if the eventData meets the portfolio criteria for adding a position.
     tradeCapitalRequirement = positionData.getBuyingPower()
 
+    # Determine the commissions that the trade requires.
+    openCommissionFeeCapitalRequirement = positionData.getCommissionsAndFees('open', self.pricingSourceConfig)
+
     # Amount of buying power that would be used with this strategy.
-    tentativeBuyingPower = self.totalBuyingPower + tradeCapitalRequirement
+    tentativeBuyingPower = self.totalBuyingPower + tradeCapitalRequirement + openCommissionFeeCapitalRequirement
 
     # If we have not used too much total buying power in the portfolio, and the current trade is using less
     # than the maximum allowed per trade, we add the position to the portfolio.
@@ -78,7 +96,8 @@ class Portfolio(object):
         (tradeCapitalRequirement < self.netLiquidity*decimal.Decimal(self.maxCapitalToUsePerTrade))):
       self.activePositions.append(eventData)
       self.totalBuyingPower += tentativeBuyingPower
-      logging.info('Buying power updated.')
+      # Reduce the realized capital by the commissions and fees.
+      self.realizedCapital -= openCommissionFeeCapitalRequirement
 
       # Update delta, vega, theta and gamma for portfolio.
       self.totalDelta += positionData.getDelta()
@@ -115,36 +134,56 @@ class Portfolio(object):
     self.dayProfitLoss = 0
     self.openProfitLossPercent = 0
     self.dayProfitLossPercent = 0
+    self.totalNumberContracts = 0
 
     # Array / list used to keep track of which positions we should remove.
     idxsToDelete = []
 
     # Go through all positions in portfolio and update the values.
+    currentDateTime = None
     for idx, curPosition in enumerate(self.activePositions):
       positionData = curPosition[0]
       riskMangementStrategy = curPosition[1]
 
-      # Update the option intrinsic values.
-      # TODO(msantoro): Can just 'continue' here if the position doesn't need to be updated.
-      positionData.updateValues(tickData)
-
-      # Called even if position is removed to update netLiquidity in the portfolio.
-      self.netLiquidity += positionData.calcProfitLoss()
-
-      if riskMangementStrategy.managePosition(positionData):
+      # Update the position values and check if we need to manage the position.
+      if not positionData.updateValues(tickData) or riskMangementStrategy.managePosition(positionData):
+        # If we can't update the values, we have to remove the position. Sometimes this happens when we have
+        # incomplete option data. Otherwise, we see if we need to manage the position.
+        self.realizedCapital += positionData.calcProfitLoss() - positionData.getCommissionsAndFees(
+          'close', self.pricingSourceConfig)
         idxsToDelete.append(idx)
       else:
+        self.netLiquidity += positionData.calcProfitLoss()
         # Update greeks and total buying power.
         self.__calcPortfolioValues(positionData)
+        self.totalNumberContracts += positionData.getNumContracts()
+
+      currentDateTime = positionData.getDateTime()
+      underlyingPrice = positionData.getUnderlyingPrice()
 
     # Add the realized capital to the profit / loss of all open positions to get final net liq.
     self.netLiquidity += self.realizedCapital
-    logging.info("Net liquidity: %f.", self.netLiquidity)
 
     # Go through and delete any positions which were added to the idxsToDelete array.
     for idx in reversed(idxsToDelete):
       logging.info('The %s position was closed.', self.activePositions[idx][0].getUnderlyingTicker())
       del(self.activePositions[idx])
+
+    if self.positionMonitoring is not None:
+      # Update the position monitoring dictionary.
+      self.positionMonitoring['Date'].append(currentDateTime)
+      self.positionMonitoring['UnderlyingPrice'].append(underlyingPrice)
+      self.positionMonitoring['NetLiq'].append(self.netLiquidity)
+      self.positionMonitoring['RealizedCapital'].append(self.realizedCapital)
+      self.positionMonitoring['NumPositions'].append(len(self.activePositions))
+      self.positionMonitoring['TotNumContracts'].append(self.totalNumberContracts)
+      self.positionMonitoring['BuyingPower'].append(self.totalBuyingPower)
+      self.positionMonitoring['TotalDelta'].append(self.totalDelta)
+
+    logging.info(
+      'Date: {} UnderlyingPrice: {} NetLiq: {} RealizedCapital: {} NumPositions: {} TotNumContracts: {} BuyingPower: {} TotalDelta: {}'.format(
+        currentDateTime, underlyingPrice, self.netLiquidity, self.realizedCapital, len(self.activePositions),
+        self.totalNumberContracts, self.totalBuyingPower, self.totalDelta))
 
   def __calcPortfolioValues(self, curPosition: optionPrimitive.OptionPrimitive) -> None:
     """Updates portfolio values for current position.

@@ -1,4 +1,5 @@
 import unittest
+import decimal
 import pytz
 import queue
 from datetime import datetime
@@ -54,7 +55,7 @@ class TestStrangleStrategy(unittest.TestCase):
     self.maxCallDelta = 0.30
     self.optPutDelta = -0.16
     self.maxPutDelta = -0.30
-    self.startDateTime = datetime.now(pytz.utc)
+    self.startDateTime = None
     self.buyOrSell = optionPrimitive.TransactionType.SELL
     self.underlyingTicker = 'AAPL'
     self.orderQuantity = 1
@@ -68,21 +69,23 @@ class TestStrangleStrategy(unittest.TestCase):
     self.maxBidAsk = 0.15
     self.minBuyingPower = None
     self.curStrategy = strangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
-                                                   self.optPutDelta, self.maxPutDelta, self.startDateTime,
-                                                   self.buyOrSell, self.underlyingTicker, self.orderQuantity,
-                                                   self.riskManagement, self.expCycle, self.optimalDTE, self.minimumDTE,
-                                                   self.minimumROC, self.minCredit, self.maxBidAsk, self.minBuyingPower)
-
+                                                   self.optPutDelta, self.maxPutDelta, self.buyOrSell,
+                                                   self.underlyingTicker, self.orderQuantity, self.riskManagement,
+                                                   self.expCycle, self.optimalDTE, self.minimumDTE, self.minimumROC,
+                                                   self.minCredit, self.maxBidAsk, self.minBuyingPower,
+                                                   startDateTime=self.startDateTime)
+    self.portfolioNetLiquidity = decimal.Decimal(100000)
+    self.availableBuyingPower = decimal.Decimal(50000)
 
   def testUpdateWithOptimalOptionNonSupportedExpiration(self):
     """Tests that no signal event is created if we choose an unsupported expiration."""
     expCycle = strangleStrat.strategy.ExpirationTypes.QUARTERLY
     curStrategy = strangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
-                                              self.optPutDelta, self.maxPutDelta, self.startDateTime,
-                                              self.buyOrSell, self.underlyingTicker, self.orderQuantity,
-                                              expCycle, self.optimalDTE, self.minimumDTE, self.minimumROC,
-                                              self.minCredit, self.maxBidAsk, self.minBuyingPower)
-    curStrategy.checkForSignal(self.optionChain)
+                                              self.optPutDelta, self.maxPutDelta, self.buyOrSell, self.underlyingTicker,
+                                              self.orderQuantity, expCycle, self.optimalDTE, self.minimumDTE,
+                                              self.minimumROC, self.minCredit, self.maxBidAsk, self.minBuyingPower,
+                                              startDateTime=self.startDateTime)
+    curStrategy.checkForSignal(self.optionChain, self.portfolioNetLiquidity, self.availableBuyingPower)
     self.assertEqual(self.signalEventQueue.qsize(), 0)
 
   def testUpdateWithOptimalOptionNotMonthlyExpiration(self):
@@ -91,7 +94,7 @@ class TestStrangleStrategy(unittest.TestCase):
     testOptionChain = [self.optionChain.getData()[0], self.optionChain.getData()[1]]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     self.assertEqual(self.signalEventQueue.qsize(), 0)
 
   def testUpdateWithOptimalOptionDTELessThanMinimum(self):
@@ -105,7 +108,7 @@ class TestStrangleStrategy(unittest.TestCase):
     testOptionChain = [callOption, putOption]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     self.assertEqual(self.signalEventQueue.qsize(), 0)
 
   def testUpdateWithOptimalOptionDeltaGreaterThanMaxCallDelta(self):
@@ -121,7 +124,7 @@ class TestStrangleStrategy(unittest.TestCase):
     testOptionChain = [callOption, putOption]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     self.assertEqual(self.signalEventQueue.qsize(), 0)
 
   def testUpdateWithOptimalOptionDeltaGreaterThanMaxPutDelta(self):
@@ -137,7 +140,7 @@ class TestStrangleStrategy(unittest.TestCase):
     testOptionChain = [callOption, putOption]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     self.assertEqual(self.signalEventQueue.qsize(), 0)
 
   def testUpdateWithOptimalOptionBidAskDiffGreaterThanMax(self):
@@ -158,7 +161,7 @@ class TestStrangleStrategy(unittest.TestCase):
     testOptionChain = [callOption, putOption]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     self.assertEqual(self.signalEventQueue.qsize(), 0)
 
   def testUpdateWithOptimalOptionChooseCloserExpiration(self):
@@ -182,21 +185,22 @@ class TestStrangleStrategy(unittest.TestCase):
     putOptionOptimalDTE.delta = -0.10
 
     # Set the bidPrice and askPrice such that the difference is less than self.maxBidAsk.
-    callOptionNonOptimalDTE.bidPrice = 0.00
-    callOptionNonOptimalDTE.askPrice = self.maxBidAsk
-    callOptionOptimalDTE.bidPrice = 0.00
-    callOptionOptimalDTE.askPrice = self.maxBidAsk
-    putOptionNonOptimalDTE.bidPrice = 0.00
-    putOptionNonOptimalDTE.askPrice = self.maxBidAsk
-    putOptionOptimalDTE.bidPrice = 0.00
-    putOptionOptimalDTE.askPrice = self.maxBidAsk
+    epsilon = 0.001
+    callOptionNonOptimalDTE.bidPrice = decimal.Decimal(0.00)
+    callOptionNonOptimalDTE.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    callOptionOptimalDTE.bidPrice = decimal.Decimal(0.00)
+    callOptionOptimalDTE.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    putOptionNonOptimalDTE.bidPrice = decimal.Decimal(0.00)
+    putOptionNonOptimalDTE.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    putOptionOptimalDTE.bidPrice = decimal.Decimal(0.00)
+    putOptionOptimalDTE.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
 
     testOptionChain = [callOptionNonOptimalDTE, putOptionNonOptimalDTE, callOptionOptimalDTE, putOptionOptimalDTE]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     strangleObj = self.signalEventQueue.get().getData()[0]
-    self.assertAlmostEqual(strangleObj.getDelta(), callOptionOptimalDTE.delta + putOptionOptimalDTE.delta)
+    self.assertAlmostEqual(strangleObj.getDelta(), 8*(callOptionOptimalDTE.delta + putOptionOptimalDTE.delta))
 
   def testUpdateWithOptimalOptionChooseCloserDelta(self):
     """Tests that if options have the same DTE, chose option with the delta closer to requested delta."""
@@ -219,19 +223,20 @@ class TestStrangleStrategy(unittest.TestCase):
     putOptionOptimalDelta.delta = self.optPutDelta
 
     # Set the bidPrice and askPrice such that the difference is less than self.maxBidAsk.
-    callOptionNonOptimalDelta.bidPrice = 0.00
-    callOptionNonOptimalDelta.askPrice = self.maxBidAsk
-    callOptionOptimalDelta.bidPrice = 0.00
-    callOptionOptimalDelta.askPrice = self.maxBidAsk
-    putOptionNonOptimalDelta.bidPrice = 0.00
-    putOptionNonOptimalDelta.askPrice = self.maxBidAsk
-    putOptionOptimalDelta.bidPrice = 0.00
-    putOptionOptimalDelta.askPrice = self.maxBidAsk
+    epsilon = 0.001
+    callOptionNonOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    callOptionNonOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    callOptionOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    callOptionOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    putOptionNonOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    putOptionNonOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    putOptionOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    putOptionOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
 
     testOptionChain = [callOptionNonOptimalDelta, putOptionNonOptimalDelta, callOptionOptimalDelta, putOptionOptimalDelta]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     strangleObj = self.signalEventQueue.get().getData()[0]
     self.assertAlmostEqual(strangleObj.getDelta(), callOptionOptimalDelta.delta + putOptionOptimalDelta.delta)
 
@@ -257,20 +262,21 @@ class TestStrangleStrategy(unittest.TestCase):
     putOptionNonOptimalDelta.delta = -0.1
 
     # Set the bidPrice and askPrice such that the difference is less than self.maxBidAsk.
-    callOptionOptimalDelta.bidPrice = 0.00
-    callOptionOptimalDelta.askPrice = self.maxBidAsk
-    callOptionNonOptimalDelta.bidPrice = 0.00
-    callOptionNonOptimalDelta.askPrice = self.maxBidAsk
-    putOptionOptimalDelta.bidPrice = 0.00
-    putOptionOptimalDelta.askPrice = self.maxBidAsk
-    putOptionNonOptimalDelta.bidPrice = 0.00
-    putOptionNonOptimalDelta.askPrice = self.maxBidAsk
+    epsilon = 0.001
+    callOptionOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    callOptionOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    callOptionNonOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    callOptionNonOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    putOptionOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    putOptionOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+    putOptionNonOptimalDelta.bidPrice = decimal.Decimal(0.00)
+    putOptionNonOptimalDelta.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
 
     testOptionChain = [callOptionOptimalDelta, putOptionOptimalDelta, callOptionNonOptimalDelta,
                        putOptionNonOptimalDelta]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     strangleObj = self.signalEventQueue.get().getData()[0]
     self.assertAlmostEqual(strangleObj.getDelta(), callOptionOptimalDelta.delta + putOptionOptimalDelta.delta)
 
@@ -292,40 +298,8 @@ class TestStrangleStrategy(unittest.TestCase):
     testOptionChain = [callOption, putOption]
     event = tickEvent.TickEvent()
     event.createEvent(testOptionChain)
-    self.curStrategy.checkForSignal(event)
+    self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
     self.assertEqual(self.signalEventQueue.qsize(), 0)
-
-  def testCheckForSignalSetMinBuyingPowerToForceMoreContracts(self):
-    """Checks that more than one strangle is created if minBuyingPower is set."""
-    callOption = self.optionChain.getData()[0]
-    putOption = self.optionChain.getData()[1]
-    # Set expiration to be monthly and less than self.minimumDTE.
-    callOption.expirationDateTime = datetime.fromisoformat('2014-09-19')
-    putOption.expirationDateTime = datetime.fromisoformat('2014-09-19')
-    # Set put and call delta to be the desired values.
-    putOption.delta = self.optPutDelta
-    callOption.delta = self.optCallDelta
-    # Set the bidPrice and askPrice such that the difference is less than self.maxBidAsk.
-    putOption.bidPrice = 0.00
-    putOption.askPrice = self.maxBidAsk
-    callOption.bidPrice = 0.00
-    callOption.askPrice = self.maxBidAsk
-    testOptionChain = [callOption, putOption]
-
-    # Set minimum buying power to force more strangles to be added.
-    minBuyingPower = 20600  # two strangles in 'AAPL' for test data.
-    curStrategy = strangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
-                                              self.optPutDelta, self.maxPutDelta, self.startDateTime,
-                                              self.buyOrSell, self.underlyingTicker, self.orderQuantity,
-                                              self.riskManagement, self.expCycle, self.optimalDTE, self.minimumDTE,
-                                              self.minimumROC, self.minCredit, self.maxBidAsk, minBuyingPower)
-
-    event = tickEvent.TickEvent()
-    event.createEvent(testOptionChain)
-    curStrategy.checkForSignal(event)
-    strangleObj = self.signalEventQueue.get().getData()[0]
-    self.assertEqual(strangleObj.getNumContracts(), 2)
-    #self.assertEqual(self.signalEventQueue.qsize(), 0)
 
 if __name__ == '__main__':
     unittest.main()
