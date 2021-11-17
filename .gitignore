@@ -107,3 +107,12 @@ ENV/
 # Ignore specific files
 /marketData
 /utils
+positions_put_vertical_01_11_21.csv
+positions_put_vertical_01_11_21.log
+positions_put_vertical_01_12_21.csv
+positions_put_vertical_01_12_21.log
+positions_put_vertical_strat_close_at_50_percent_01_08_21_fixed_pl_percentage.csv
+positions_put_vertical_strat_close_at_50_percent_01_10_21_try_comms_fees.csv
+positions_strangle_01_15_21.csv
+positions_strangle_01_15_21.log
+session.log
