@@ -8,6 +8,10 @@ class TransactionType(enum.Enum):
   BUY = 0
   SELL = 1
 
+class TradeDirection(enum.Enum):
+  LONG = 0
+  SHORT = 1
+
 class OptionPrimitive(abc.ABC):
   """This class is a generic type for any primitive that can be made using a PUT or CALL option and/or stock,
      e.g., iron condor or strangle.

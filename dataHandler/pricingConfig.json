@@ -1,0 +1,34 @@
+{"tastyworks": {
+  "stock_options": {
+    "index_option": {
+      "open": {
+        "commission_per_contract": 0.65,
+        "max_commission_per_leg": 0.00,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02135
+      },
+      "close": {
+        "commission_per_contract": 0.65,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02135,
+        "finra_taf_per_contract": 0.002,
+        "sec_fee_per_contract_wo_trade_price": 0.00051
+      }
+    },
+    "equity_or_etf_option": {
+      "open": {
+        "commission_per_contract": 1.00,
+        "max_commission_per_leg": 10.00,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02135
+      },
+      "close": {
+        "commission_per_contract": 0.00,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02135,
+        "finra_taf_per_contract": 0.002,
+        "sec_fee_per_contract_wo_trade_price": 0.00051
+      }
+    }
+  }
+}}

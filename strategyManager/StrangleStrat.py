@@ -6,6 +6,7 @@ from riskManagement import riskManagement
 from typing import Optional, Text, Tuple
 import datetime
 import decimal
+import logging
 import queue
 
 class StrangleStrat(strategy.Strategy):
@@ -18,7 +19,7 @@ class StrangleStrat(strategy.Strategy):
     maxPutDelta:  Max delta for put.
 
   General strategy attributes:
-    startDateTime:  Date/time to start the live trading or backtest.
+    startDateTime:  Date/time to start the backtest.
     buyOrSell:  Do we buy a strangle or sell a strangle.
     underlyingTicker:  Which underlying to use for the strategy.
     orderQuantity:  Number of strangles.
@@ -31,18 +32,17 @@ class StrangleStrat(strategy.Strategy):
     minimumROC:  Minimal return on capital for overall trade as a decimal.
     minCredit:  Minimum credit to collect on overall trade.
     maxBidAsk:  Maximum price to allow between bid and ask prices of option (for any strike or put/call).
-    minBuyingPower:  Minimum investment we want for the strategy -- since prices vary greatly over a range like
-                     1990 to 2017, we would like to have the same amount of money in the market at any given
-                     time, so we increase the number of contracts to reach this minBuyingPower.
+    maxCapitalToUsePerTrade: percent (as a decimal) of portfolio value we want to use per trade.
 """
 
   def __init__(self, eventQueue:queue.Queue, optCallDelta: float, maxCallDelta: float, optPutDelta: float,
-               maxPutDelta: float, startDateTime: datetime.datetime, buyOrSell: optionPrimitive.TransactionType,
+               maxPutDelta: float, buyOrSell: optionPrimitive.TransactionType,
                underlyingTicker: Text, orderQuantity: int, riskManagement: riskManagement.RiskManagement,
                expCycle: Optional[strategy.ExpirationTypes]=None, optimalDTE: Optional[int]=None,
                minimumDTE: Optional[int]=None, minimumROC: Optional[float]=None,
                minCredit: Optional[decimal.Decimal]=None, maxBidAsk: Optional[decimal.Decimal]=None,
-               minBuyingPower: Optional[decimal.Decimal]=None):
+               maxCapitalToUsePerTrade: Optional[decimal.Decimal]=None,
+               startDateTime: Optional[datetime.datetime]=None):
 
     self.__eventQueue = eventQueue
     self.__optCallDelta = optCallDelta
@@ -61,7 +61,7 @@ class StrangleStrat(strategy.Strategy):
     self.minimumROC=minimumROC
     self.minCredit=minCredit
     self.maxBidAsk=maxBidAsk
-    self.minBuyingPower=minBuyingPower
+    self.maxCapitalToUsePerTrade=maxCapitalToUsePerTrade
 
   def __updateWithOptimalOption(self, currentOption: option.Option,
                                 optimalOption: option.Option) -> Tuple[bool, option.Option]:
@@ -76,32 +76,32 @@ class StrangleStrat(strategy.Strategy):
     noUpdateRule = (False, optimalOption)
     # TODO: Add support for expiration cycles other than monthly.
     if self.expCycle == strategy.ExpirationTypes.MONTHLY:
-      if not self.__isMonthlyExp(currentOption.expirationDateTime):
+      if not self.isMonthlyExp(currentOption.expirationDateTime):
         return noUpdateRule
     else:
       return noUpdateRule
 
     if self.minimumDTE:
-      if not self.__hasMinimumDTE(currentOption.dateTime, currentOption.expirationDateTime):
+      if not self.hasMinimumDTE(currentOption.dateTime, currentOption.expirationDateTime):
         return noUpdateRule
 
     # Check that delta is less or equal to max delta specified.
     if currentOption.optionType == option.OptionTypes.CALL:
-      if currentOption.delta >= self.__maxCallDelta:
+      if currentOption.delta > self.__maxCallDelta:
         return noUpdateRule
     else:
       # PUT option.
-      if currentOption.delta <= self.__maxPutDelta:
+      if currentOption.delta < self.__maxPutDelta:
         return noUpdateRule
 
     # Check if bid / ask of option < maxBidAsk specific in strangle strategy.
     if self.maxBidAsk:
-      if self.__calcBidAskDiff(currentOption.bidPrice, currentOption.askPrice) > self.maxBidAsk:
+      if self.calcBidAskDiff(currentOption.bidPrice, currentOption.askPrice) > self.maxBidAsk:
         return noUpdateRule
 
     # Get current DTE in days.
-    currentDTE = self.__getNumDays(currentOption.dateTime, currentOption.expirationDateTime)
-    optimalDTE = self.__getNumDays(optimalOption.dateTime, optimalOption.expirationDateTime) if optimalOption else None
+    currentDTE = self.getNumDays(currentOption.dateTime, currentOption.expirationDateTime)
+    optimalDTE = self.getNumDays(optimalOption.dateTime, optimalOption.expirationDateTime) if optimalOption else None
     requestedDTE = self.optimalDTE
 
     # Check if there is no current optimal DTE or an expiration closer to the requested expiration.
@@ -124,13 +124,16 @@ class StrangleStrat(strategy.Strategy):
 
     return (True, newOptimalOption)
 
-  def checkForSignal(self, event: tickEvent) -> None:
+  def checkForSignal(self, event: tickEvent, portfolioNetLiquidity: decimal.Decimal,
+                     availableBuyingPower: decimal.Decimal) -> None:
     """Criteria that we need to check before generating a signal event.
     We go through each option in the option chain and find all of the options that meet the criteria.  If there are
     multiple options that meet the criteria, we choose the first one, but we could use some other type of rule.
 
     Attributes:
       event - Tick data we parse through to determine if we want to create a strangle for the strategy.
+      portfolioNetLiquidity: Net liquidity of portfolio.
+      availableBuyingPower: Amount of buying power available to use.
     """
     # These variables will be used to keep track of the optimal options as we go through the option chain.
     optimalCallOpt = None
@@ -138,6 +141,13 @@ class StrangleStrat(strategy.Strategy):
 
     # Get the data from the tick event.
     eventData = event.getData()
+
+    if not eventData:
+      return
+
+    if self.startDateTime is not None:
+      if eventData[0].dateTime < self.startDateTime:
+        return
 
     # Process one option at a time from the option chain (objects of option class).
     for currentOption in eventData:
@@ -155,55 +165,34 @@ class StrangleStrat(strategy.Strategy):
     if optimalPutOpt and optimalCallOpt and optimalPutOpt.expirationDateTime == optimalCallOpt.expirationDateTime:
       strangleObj = strangle.Strangle(self.orderQuantity, optimalCallOpt, optimalPutOpt, self.buyOrSell)
 
-      # If we are requiring that we always have the same amount of money invested regardless of time frame,
-      # then we may need to increase the number of strangles to meet this minBuyingPower requirement.
-      minBuyingPower = self.minBuyingPower
-      if minBuyingPower:
-          buyingPowerUsed = strangleObj.getBuyingPower()
-          # Require at least one contract; too much buying power will be rejected in the portfolio class.
-          numContractsToAdd = max(1, int(minBuyingPower / buyingPowerUsed))
-          strangleObj.setNumContracts(numContractsToAdd)
+      # There is a case in the input data where the delta values are incorrect, and this results the strike price
+      # of the short put being greater than the strike price of the short call, and this results in negative buying
+      # power. To handle this error case, we return if the buying power is zero or negative.
+      buyingPowerUsed = strangleObj.getBuyingPower()
+      if buyingPowerUsed <= 0:
+        return
 
-      # Create signal event to put on strangle strategy and add to queue
-      # TODO: We need to pass the management strategy to createEvent below.
+      # There is an error case in the input data where the options may will have zero credit / debit when put on.
+      if optimalPutOpt.tradePrice <= 0 or optimalCallOpt.tradePrice <= 0:
+        logging.warning('Optimal put or optimal call had a zero tradePrice, which should not happen.')
+        return
+
+      if self.maxCapitalToUsePerTrade:
+        portfolioToUsePerTrade = decimal.Decimal(self.maxCapitalToUsePerTrade) * portfolioNetLiquidity
+        maxBuyingPowerPerTrade = min(availableBuyingPower, portfolioToUsePerTrade)
+      else:
+        maxBuyingPowerPerTrade = availableBuyingPower
+
+      numContractsToAdd = int(maxBuyingPowerPerTrade / buyingPowerUsed)
+      if numContractsToAdd < 1:
+        return
+
+      strangleObj.setNumContracts(numContractsToAdd)
+
+      # Create signal event to put on strangle strategy and add to queue.
       signalObj = [strangleObj, self.riskManagement]
       event = signalEvent.SignalEvent()
       event.createEvent(signalObj)
-      #event.createEvent(strangleObj)
       self.__eventQueue.put(event)
-
-  def __calcBidAskDiff(self, bidPrice: decimal.Decimal, askPrice: decimal.Decimal):
-    """ Calculate the absolute difference between the bid and ask price.
-    If any of the arguments are <= 0, return a very large difference (100).
-    :param bidPrice: price at which the option can be sold.
-    :param askPrice: price at which the option can be bought.
-    :return: Absolute difference;
-    """
-    return abs(bidPrice - askPrice)
-
-  def __isMonthlyExp(self, dateTime: datetime.datetime):
-    """
-    Check if the option expiration falls on the third Friday of the month, or if the third Friday is a holiday,
-    check if the expiration falls on the Thursday that precedes it.
-    :param dateTime: option expiration date in mm/dd/yy format.
-    :return: True if it's a monthly option; False otherwise.
-    """
-    return (dateTime.weekday() == 4 and 14 < dateTime.day < 22)
-
-  def __hasMinimumDTE(self, curDateTime: datetime.datetime, expDateTime: datetime.datetime):
-    """"
-    Determine if the current expiration date of the option is >= self.minimumDTE days from the current date.
-    :param curDateTime: current date in mm/dd/yy format.
-    :param expDateTime: option expiration date in mm/dd/yy format.
-    :return: True if difference between current date and dateTime is >= self.minimumDTE; else False.
-    """
-    return (expDateTime - curDateTime).days >= self.minimumDTE
-
-  def __getNumDays(self, curDateTime: datetime.datetime, expDateTime: datetime.datetime):
-    """"
-    Determine the number of days between the curDateTime and the expDateTime.
-    :param curDateTime: current date in mm/dd/yy format.
-    :param expDateTime: option expiration date in mm/dd/yy format.
-    :return: Number of days between curDateTime and expDateTime.
-    """
-    return (expDateTime - curDateTime).days
+    else:
+      logging.info('Could not execute strategy for this option chain.')
