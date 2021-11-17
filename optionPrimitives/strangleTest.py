@@ -187,7 +187,6 @@ class TestStrangle(unittest.TestCase):
 
   def testStrangleBuyingPower15PercentRule(self):
     # Tests the buying power calculation for the 15% rule.
-    # TODO(msantoro): Get live values from Tastyworks to use here.
     putOpt = put.Put(underlyingTicker='SPX', underlyingPrice=decimal.Decimal(2786.24),
                      strikePrice=decimal.Decimal(2500), delta=0.01,
                      dateTime=datetime.datetime.strptime('01/01/2021', "%m/%d/%Y"),

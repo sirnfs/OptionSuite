@@ -7,8 +7,7 @@ class TestStrategyClass(unittest.TestCase):
 
   def testStrategyClassCreation(self):
     """Tests than an exception is raised when class is instantiated."""
-    with self.assertRaisesRegex(TypeError, 'Can\'t instantiate abstract class Strategy with abstract methods'
-      ' checkForSignal'):
+    with self.assertRaisesRegex(TypeError, 'Cannot instantiate class.'):
       strategy.Strategy(startDateTime=datetime.datetime.now(), buyOrSell=optionPrimitive.TransactionType.SELL,
                         underlyingTicker='SPY', orderQuantity=1)
 

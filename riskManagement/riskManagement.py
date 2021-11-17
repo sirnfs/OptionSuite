@@ -12,3 +12,7 @@ class RiskManagement(abc.ABC):
     :param currentPosition: Current position in the portfolio.
     """
     pass
+
+  def getRiskManagementType(self) -> int:
+    """Returns the risk management type being used."""
+    pass

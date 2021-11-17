@@ -106,3 +106,4 @@ ENV/
 
 # Ignore specific files
 /marketData
+/utils

@@ -2,6 +2,7 @@ import csv
 import datetime
 import decimal
 import json
+import logging
 import pandas as pd
 import queue
 from dataHandler import dataHandler
@@ -109,6 +110,7 @@ class CsvData(dataHandler.DataHandler):
 
     else:
       if self.__nextTimeDateRow is None:
+        logging.warning('None was returned for the nextTimeDateRow in the CSV reader.')
         return pd.DataFrame()
       # Get the date / time from the previously stored row.
       self.__curTimeDate = datetime.datetime.strptime(self.__nextTimeDateRow[self.__dateColumnIndex],
@@ -189,6 +191,8 @@ class CsvData(dataHandler.DataHandler):
                   'tradePrice': decimal.Decimal(optionFieldDict['tradePrice']),
                   'openInterest': int(optionFieldDict['openInterest']), 'volume': int(optionFieldDict['volume']),
                   'dateTime': datetime.datetime.strptime(optionFieldDict['dateTime'],
+                                                         dataProviderConfig['date_time_format']),
+                  'tradeDateTime': datetime.datetime.strptime(optionFieldDict['dateTime'],
                                                          dataProviderConfig['date_time_format']),
                   'theta': float(optionFieldDict['theta']),
                   'gamma': float(optionFieldDict['gamma']), 'rho': float(optionFieldDict['rho']),
