@@ -50,7 +50,7 @@ You can request different time periods.  A large time period such as 1990 to 201
 
 ## Loading the Data
 
-Once you have downloaded the data, simply update the three lines below, and you are ready to run *backTester.py*.
+Once you have downloaded the data, simply update the two lines below, and you are ready to run *backTester.py*.
 
 ```
 dataProvider = 'iVolatility'
