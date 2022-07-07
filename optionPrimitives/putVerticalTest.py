@@ -180,7 +180,7 @@ class TestPutVertical(unittest.TestCase):
   def testVerticalCalcProfitLossPercentage(self):
     """Tests that the profit / loss percentage is calculated correctly."""
     self.__shortPutVertical.updateValues(self.__shortPutVerticalTickData)
-    self.assertAlmostEqual(self.__shortPutVertical.calcProfitLossPercentage(), decimal.Decimal(-11.5656721))
+    self.assertAlmostEqual(self.__shortPutVertical.calcProfitLossPercentage(), decimal.Decimal(-30.1040832666))
 
   def testVerticalBuyingPower(self):
     # Tests the buying power calculation for the vertical.
