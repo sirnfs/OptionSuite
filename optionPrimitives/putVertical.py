@@ -113,7 +113,7 @@ class PutVertical(optionPrimitive.OptionPrimitive):
     totProfitLoss = self.calcProfitLoss()
 
     # Get the initial credit or debit paid for selling or buying the vertical, respectively.
-    putToBuyCreditDebit = self.__putToBuy.tradePrice
+    putToBuyCreditDebit = -self.__putToBuy.tradePrice
     putToSellCreditDebit = self.__putToSell.tradePrice
     totCreditDebit = (putToBuyCreditDebit + putToSellCreditDebit) * 100 * self.__numContracts
 
