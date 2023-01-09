@@ -38,7 +38,7 @@ The library is designed in a modular way, and several abstractions are provided 
 # Getting Started 
 *The library has been tested with Python 3.0+*
 
-To get started, you first need some historical data for the backtests.  
+To get started, you need a Python environment with pandas installed. You'll also need some historical data for the backtests.  
 
 ## Getting the Data
 
