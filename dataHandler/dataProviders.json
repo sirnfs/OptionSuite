@@ -28,6 +28,6 @@
 
   "call_symbol_abbreviation": "C",
   "put_symbol_abbreviation": "P",
-  "date_time_format": "%m/%d/%y",
+  "date_time_format": "%m/%d/%Y",
   "data_source_type": "options"
 }}
