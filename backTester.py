@@ -7,7 +7,7 @@ from dataHandler import csvData
 from events import event as event_class
 from optionPrimitives import optionPrimitive
 from riskManagement import putVerticalRiskManagement, strangleRiskManagement
-from strategyManager import strategy, strangleStrat, putVerticalOnDownMoveStrat
+from strategyManager import strategy, StrangleStrat, putVerticalOnDownMoveStrat
 from portfolioManager import portfolio
 from datetime import datetime
 from collections import defaultdict
@@ -50,7 +50,7 @@ class BackTestSession(object):
     # Set up strategy (strangle strategy) and risk management preference.
     riskManagement = strangleRiskManagement.StrangleRiskManagement(
       strangleRiskManagement.StrangleManagementStrategyTypes.CLOSE_AT_50_PERCENT)  # strangleRiskManagement.StrangleManagementStrategyTypes.HOLD_TO_EXPIRATION)
-    self.strategyManager = strangleStrat.StrangleStrat(self.eventQueue, optCallDelta, maxCallDelta, optPutDelta,
+    self.strategyManager = StrangleStrat.StrangleStrat(self.eventQueue, optCallDelta, maxCallDelta, optPutDelta,
                                                        maxPutDelta, buyOrSell, underlyingTicker,
                                                        orderQuantity, riskManagement, expCycle, optimalDTE,
                                                        minimumDTE, maxBidAsk=maxBidAsk,
