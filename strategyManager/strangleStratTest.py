@@ -7,7 +7,7 @@ from dataHandler import csvData
 from events import tickEvent
 from optionPrimitives import optionPrimitive
 from riskManagement import strangleRiskManagement
-from strategyManager import strangleStrat
+from strategyManager import StrangleStrat
 
 class TestStrangleStrategy(unittest.TestCase):
 
@@ -61,14 +61,14 @@ class TestStrangleStrategy(unittest.TestCase):
     self.orderQuantity = 1
     self.riskManagement = strangleRiskManagement.StrangleRiskManagement(
       strangleRiskManagement.StrangleManagementStrategyTypes.HOLD_TO_EXPIRATION)
-    self.expCycle = strangleStrat.strategy.ExpirationTypes.MONTHLY
+    self.expCycle = StrangleStrat.strategy.ExpirationTypes.MONTHLY
     self.optimalDTE = 45
     self.minimumDTE = 25
     self.minimumROC = 0.001
     self.minCredit = 0.5
     self.maxBidAsk = 0.15
     self.minBuyingPower = None
-    self.curStrategy = strangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
+    self.curStrategy = StrangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
                                                    self.optPutDelta, self.maxPutDelta, self.buyOrSell,
                                                    self.underlyingTicker, self.orderQuantity, self.riskManagement,
                                                    self.expCycle, self.optimalDTE, self.minimumDTE, self.minimumROC,
@@ -79,8 +79,8 @@ class TestStrangleStrategy(unittest.TestCase):
 
   def testUpdateWithOptimalOptionNonSupportedExpiration(self):
     """Tests that no signal event is created if we choose an unsupported expiration."""
-    expCycle = strangleStrat.strategy.ExpirationTypes.QUARTERLY
-    curStrategy = strangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
+    expCycle = StrangleStrat.strategy.ExpirationTypes.QUARTERLY
+    curStrategy = StrangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
                                               self.optPutDelta, self.maxPutDelta, self.buyOrSell, self.underlyingTicker,
                                               self.orderQuantity, expCycle, self.optimalDTE, self.minimumDTE,
                                               self.minimumROC, self.minCredit, self.maxBidAsk, self.minBuyingPower,
