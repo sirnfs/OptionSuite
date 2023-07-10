@@ -157,6 +157,31 @@ class TestPortfolio(unittest.TestCase):
     # Only one position should be left in the portfolio after removing the expired position.
     self.assertEqual(len(portfolioObj.activePositions), 1)
 
+  def testOnMultipleSignalSuccess(self):
+    """Tests that the portfolio values are correct after multiple trades have been put on."""
+    event = signalEvent.SignalEvent()
+    event.createEvent([self.strangleObj, self.riskManagement])
+
+    # Create portfolio onSignal event, which adds the position to the portfolio.
+    startingCapital = decimal.Decimal(1000000)
+    maxCapitalToUse = 0.5
+    maxCapitalToUsePerTrade = 0.5
+    portfolioObj = portfolio.Portfolio(startingCapital, maxCapitalToUse, maxCapitalToUsePerTrade,
+                                       pricingSource=self.pricingSource,
+                                       pricingSourceConfigFile=self.pricingSourceConfigFile)
+    portfolioObj.onSignal(event)
+
+    # Add second signal / trade.
+    event = signalEvent.SignalEvent()
+    event.createEvent([self.strangleObj, self.riskManagement])
+    portfolioObj.onSignal(event)
+
+    self.assertAlmostEqual(portfolioObj.totalBuyingPower, decimal.Decimal(126623.0853999999454835290180))
+    self.assertAlmostEqual(portfolioObj.totalVega, 0.12)
+    self.assertAlmostEqual(portfolioObj.totalDelta, 0.0)
+    self.assertAlmostEqual(portfolioObj.totalGamma, 0.04)
+    self.assertAlmostEqual(portfolioObj.totalTheta, 0.08)
+
 
 if __name__ == '__main__':
     unittest.main()
