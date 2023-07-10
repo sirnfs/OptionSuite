@@ -88,14 +88,15 @@ class Portfolio(object):
     openCommissionFeeCapitalRequirement = positionData.getCommissionsAndFees('open', self.pricingSourceConfig)
 
     # Amount of buying power that would be used with this strategy.
-    tentativeBuyingPower = self.totalBuyingPower + tradeCapitalRequirement + openCommissionFeeCapitalRequirement
+    currentTradeBuyingPower = tradeCapitalRequirement + openCommissionFeeCapitalRequirement
+    tentativeBuyingPower = self.totalBuyingPower + currentTradeBuyingPower
 
     # If we have not used too much total buying power in the portfolio, and the current trade is using less
     # than the maximum allowed per trade, we add the position to the portfolio.
     if ((tentativeBuyingPower < self.netLiquidity*decimal.Decimal(self.maxCapitalToUse)) and
         (tradeCapitalRequirement < self.netLiquidity*decimal.Decimal(self.maxCapitalToUsePerTrade))):
       self.activePositions.append(eventData)
-      self.totalBuyingPower += tentativeBuyingPower
+      self.totalBuyingPower += currentTradeBuyingPower
       # Reduce the realized capital by the commissions and fees.
       self.realizedCapital -= openCommissionFeeCapitalRequirement
 
