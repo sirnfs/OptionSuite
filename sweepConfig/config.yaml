@@ -1,0 +1,3 @@
+defaults:
+  - strategy: putVerticalOnDownMove
+  - override hydra/launcher: joblib

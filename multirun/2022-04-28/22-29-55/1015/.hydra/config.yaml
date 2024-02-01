@@ -1,0 +1,22 @@
+strategy:
+  strategyName: PUT_VERTICAL_ON_DOWN_MOVE
+  optPutToSellDelta: -0.17500000000000002
+  maxPutToSellDelta: -0.25
+  minPutToSellDelta: -0.11
+  optPutToBuyDelta: -0.029999999999999995
+  maxPutToBuyDelta: -0.1
+  minPutToBuyDelta: -0.005
+  underlyingTicker: SPX
+  orderQuantity: 1
+  expCycle: MONTHLY
+  optimalDTE: 48
+  minimumDTE: 40
+  maxBidAsk: 15
+  percentDownToTrigger: -0.01
+  numberDaysForMovingAverage: 0
+  riskManagement: CLOSE_AT_50_PERCENT
+  closeDuration: 21
+  startingCapital: 1000000
+  maxCapitalToUse: 0.35
+  maxCapitalToUsePerTrade: 0.2
+  startDateTime: 01/03/2005

@@ -1,0 +1,3 @@
+- strategy.optPutToSellDelta=-0.2
+- strategy.optPutToBuyDelta=-0.06999999999999999
+- strategy.optimalDTE=27

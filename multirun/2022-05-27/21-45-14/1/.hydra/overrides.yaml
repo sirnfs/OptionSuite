@@ -1,0 +1,7 @@
+- strategy.optimalDTE=24
+- strategy.maxCapitalToUse=0.45
+- strategy.maxCapitalToUsePerTrade=0.3
+- strategy.optPutToSellDelta=-0.175
+- strategy.optPutToBuyDelta=-0.09
+- strategy.riskManagement=HOLD_TO_EXPIRATION
+- strategy.minimumDTE=20

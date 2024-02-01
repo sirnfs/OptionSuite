@@ -1,0 +1,6 @@
+- strategy.optimalDTE=46
+- strategy.maxCapitalToUse=0.3
+- strategy.maxCapitalToUsePerTrade=0.4
+- strategy.closeDuration=21
+- strategy.optPutToSellDelta=-0.2
+- strategy.optPutToBuyDelta=-0.09

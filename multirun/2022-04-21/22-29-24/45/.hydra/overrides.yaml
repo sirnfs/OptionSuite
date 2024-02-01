@@ -1,0 +1,4 @@
+- strategy.optimalDTE=45
+- strategy.maxCapitalToUse=0.25
+- strategy.maxCapitalToUsePerTrade=0.4
+- strategy.closeDuration=19
