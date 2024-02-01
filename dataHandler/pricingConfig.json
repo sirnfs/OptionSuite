@@ -1,0 +1,57 @@
+{"tastyworks": {
+  "stock_options": {
+    "index_option": {
+      "open": {
+        "commission_per_contract": 1.00,
+        "proprietary_index_fee_per_contract": 0.65,
+        "max_commission_per_leg": 0.00,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02915,
+        "sec_fee_per_contract_wo_trade_price": 0.00051
+      },
+      "close": {
+        "commission_per_contract": 0.00,
+        "proprietary_index_fee_per_contract": 0.65,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02915,
+        "finra_taf_per_contract": 0.002,
+        "sec_fee_per_contract_wo_trade_price": 0.00051
+      }
+    },
+    "equity_or_etf_option": {
+      "open": {
+        "commission_per_contract": 1.00,
+        "max_commission_per_leg": 10.00,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02915,
+        "sec_fee_per_contract_wo_trade_price": 0.00051
+      },
+      "close": {
+        "commission_per_contract": 0.00,
+        "clearing_fee_per_contract": 0.10,
+        "orf_fee_per_contract": 0.02915,
+        "finra_taf_per_contract": 0.002,
+        "sec_fee_per_contract_wo_trade_price": 0.00051
+      }
+    }
+  }
+},
+"tastyworks_futures": {
+  "futures_options": {
+    "es_option": {
+      "open": {
+        "commission_per_contract": 2.50,
+        "clearing_fee_per_contract": 0.30,
+        "nfa_fee_per_contract": 0.02,
+        "exchange_fee_per_contract": 0.55
+      },
+      "close": {
+        "commission_per_contract": 0.00,
+        "clearing_fee_per_contract": 0.30,
+        "nfa_fee_per_contract": 0.02,
+        "exchange_fee_per_contract": 0.55
+      }
+    }
+  }
+}
+}
