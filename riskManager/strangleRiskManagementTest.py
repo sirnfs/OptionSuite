@@ -11,7 +11,6 @@ from riskManager import strangleRiskManagement
 
 class TestStrangleRiskManagement(unittest.TestCase):
 
-    # TODO: continue here. Replace all the 'put' stuff with 'strangle'
     def setOptionsHelper(self, expirationDateTime: datetime.datetime, settlementPricePut: decimal.Decimal,
                          settlementPriceCall: decimal.Decimal,
                          managementType: strangleRiskManagement.StrangleManagementStrategyTypes):
