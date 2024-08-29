@@ -1,0 +1,43 @@
+{"test_provider": {
+  "number_columns": 25,
+  "column_names": {
+    "dateTime": "date",
+    "underlyingTicker": "symbol",
+    "exchangeCode": "exchange",
+    "optionSymbol": "option_symbol",
+    "optionType": "call_put",
+    "strikePrice": "strike",
+    "underlyingPrice": "stock_price_close",
+    "askPrice": "ask",
+    "bidPrice": "bid",
+    "settlementPrice": "",
+    "tradePrice": "",
+    "tradeDataTime": "",
+    "impliedVol": "iv",
+    "volume": "volume",
+    "openInterest": "open_interest",
+    "delta": "delta",
+    "theta": "theta",
+    "vega": "vega",
+    "gamma": "gamma",
+    "rho": "rho",
+    "expirationDateTime": "option_expiration",
+    "dummyColumn": "dummy_value"
+  },
+  "call_symbol_abbreviation": "C",
+  "put_symbol_abbreviation": "P",
+  "date_time_format": "%m/%d/%Y",
+  "data_source_type": "options"
+}}
+
+
+
+
+
+
+
+
+
+
+
+

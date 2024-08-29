@@ -1,6 +1,6 @@
 from strategyManager import strategy
 from events import tickEvent, signalEvent
-from optionPrimitives import optionPrimitive, strangle
+from optionPrimitives import optionPrimitive, putVertical
 from base import option
 from riskManager import riskManagement
 from typing import Optional, Text, Tuple, Mapping
@@ -24,27 +24,26 @@ class NoUpdateReason(enum.Enum):
     WRONG_TICKER = 7
 
 
-class StrangleStrat(strategy.Strategy):
-    """This class sets up strangle strategy, which involves buying or selling strangles.
+class PutVerticalStrat(strategy.Strategy):
+    """This class sets up the strategy which to put on put verticals.
 
-      Strangle specific attributes:
-        optCallDelta:  Optimal delta for call.
-        maxCallDelta:  Max delta for call.
-        minCallDelta: Min delta for call
-        optPutDelta:  Optimal delta for put.
-        maxPutDelta:  Max delta for put.
-        minPutDelta: Min delta for put.
+      Specific strategy attributes:
+        optPutToBuyDelta:   Optimal delta for the put to buy.
+        maxPutToBuyDelta:   Maximum delta for the put to buy.
+        minPutToBuyDelta:   Minimum delta for the put to buy
+        optPutToSellDelta:  Optimal delta for the put to sell.
+        maxPutToSellDelta:  Maximum delta for the put to sell.
+        minPutToSellDelta:  Minimum delta for the put to sell.
 
       General strategy attributes:
         startDateTime:  Date/time to start the backtest.
-        buyOrSell:  Do we buy or sell a strangle.
         underlyingTicker:  Which underlying to use for the strategy.
-        orderQuantity:  Number of strangles.
-        contractMultiplier: scaling factor for number of "shares" represented by an option or future.
-                            (E.g. 100 for options and 50 for ES futures options).
+        orderQuantity:  Number of verticals to sell.
+        contractMultiplier: scaling factor for number of "shares" represented by an option or future. (E.g. 100 for
+                            options and 50 for ES futures options).
         riskManagement: Risk management strategy (how to manage the trade; e.g., close, roll, hold to expiration).
-        pricingSource -- Used to indicate which brokerage to use for commissions / fees.
-        pricingSourceConfigFile -- File path to the JSON config file for commission / fees.
+        pricingSource:  Used to indicate which brokerage to use for commissions / fees.
+        pricingSourceConfigFile:  File path to the JSON config file for commission / fees.
 
       Optional attributes:
         optimalDTE:  Optimal number of days before expiration to put on strategy.
@@ -54,8 +53,8 @@ class StrangleStrat(strategy.Strategy):
         maxCapitalToUsePerTrade: percent (as a decimal) of portfolio value we want to use per trade.
     """
 
-    def __init__(self, eventQueue: queue.Queue, optCallDelta: float, maxCallDelta: float, minCallDelta,
-                 optPutDelta: float, maxPutDelta: float, minPutDelta: float, buyOrSell: optionPrimitive.TransactionType,
+    def __init__(self, eventQueue: queue.Queue, optPutToBuyDelta: float, maxPutToBuyDelta: float,
+                 minPutToBuyDelta: float, optPutToSellDelta: float, maxPutToSellDelta: float, minPutToSellDelta: float,
                  underlyingTicker: Text, orderQuantity: int, contractMultiplier: int,
                  riskManagement: riskManagement.RiskManagement, pricingSource: Text, pricingSourceConfigFile: Text,
                  optimalDTE: Optional[int] = None, minimumDTE: Optional[int] = None, maximumDTE: Optional[int] = None,
@@ -63,15 +62,15 @@ class StrangleStrat(strategy.Strategy):
                  startDateTime: Optional[datetime.datetime] = None):
 
         self.__eventQueue = eventQueue
-        self.__optCallDelta = optCallDelta
-        self.__maxCallDelta = maxCallDelta
-        self.__minCallDelta = minCallDelta
-        self.__optPutDelta = optPutDelta
-        self.__maxPutDelta = maxPutDelta
-        self.__minPutDelta = minPutDelta
+        self.__optPutToBuyDelta = optPutToBuyDelta
+        self.__maxPutToBuyDelta = maxPutToBuyDelta
+        self.__minPutToBuyDelta = minPutToBuyDelta
+        self.__optPutToSellDelta = optPutToSellDelta
+        self.__maxPutToSellDelta = maxPutToSellDelta
+        self.__minPutToSellDelta = minPutToSellDelta
 
         self.startDateTime = startDateTime
-        self.buyOrSell = buyOrSell
+        self.buyOrSell = optionPrimitive.TransactionType.SELL
         self.underlyingTicker = underlyingTicker
         self.orderQuantity = orderQuantity
         self.contractMultiplier = contractMultiplier
@@ -91,16 +90,19 @@ class StrangleStrat(strategy.Strategy):
                 fullConfig = json.load(config)
                 self.pricingSourceConfig = fullConfig[self.pricingSource]
 
-    def __updateWithOptimalOption(self, currentOption: option.Option,
-                                  optimalOption: option.Option) -> Tuple[bool, option.Option, enum.Enum]:
+    def __updateWithOptimalOption(self, currentOption: option.Option, optimalOption: option.Option, maxPutDelta: float,
+                                  optPutDelta: float, minPutDelta: float) -> Tuple[bool, option.Option, enum.Enum]:
         """Find the option that is closest to the requested parameters (delta, expiration).
 
         :param currentOption: current option from the option chain.
         :param optimalOption: current optimal option based on expiration and delta.
-        :return: tuple of (updateOption: bool, optimalOpt: option.Option, noUpdateReason: enum.Enum ).
-                updateOption bool is used to indicate if we should update the optimal option with the current option.
-    """
-        # TODO: Add support for expiration cycles other than monthly.
+        :param maxPutDelta: maximum delta of the put option.
+        :param optPutDelta: optimal delta of the put option.
+        :param minPutDelta: minimum delta of the put option.
+        :return: tuple of (updateOption: bool, optimalOpt: option.Option, noUpdateReason: enum.Enum ). updateOption bool
+                 is used to indicate if we should update the optimal option with the current option.
+        """
+        # TODO: Add support for selecting specific expiration cycles (e.g., quarterly, monthly).
 
         # Check that we are using the right ticker symbol.
         if self.underlyingTicker not in currentOption.underlyingTicker:
@@ -125,15 +127,11 @@ class StrangleStrat(strategy.Strategy):
                 return (False, optimalOption, NoUpdateReason.MAX_DTE)
 
         # Check that delta is between the minimum and maximum delta.
-        if currentOption.optionType == option.OptionTypes.CALL:
-            if currentOption.delta > self.__maxCallDelta or currentOption.delta < self.__minCallDelta:
-                return (False, optimalOption, NoUpdateReason.MIN_MAX_DELTA)
-        else:
-            # PUT option.
-            if currentOption.delta < self.__maxPutDelta or currentOption.delta > self.__minPutDelta:
-                return (False, optimalOption, NoUpdateReason.MIN_MAX_DELTA)
+        if currentOption.delta < maxPutDelta or currentOption.delta > minPutDelta:
+            return (False, optimalOption, NoUpdateReason.MIN_MAX_DELTA)
 
-        # Check if bid / ask of option < maxBidAsk specific in strangle strategy.
+        # Check if bid / ask of option < maxBidAsk specific in put vertical strategy.
+        # This can't be used for futures option data since bid and ask price are not reliable / zero / etc.
         if self.maxBidAsk:
             if self.calcBidAskDiff(currentOption.bidPrice, currentOption.askPrice) > self.maxBidAsk:
                 return (False, optimalOption, NoUpdateReason.MAX_BID_ASK)
@@ -152,12 +150,7 @@ class StrangleStrat(strategy.Strategy):
         elif currentDTE == optimalDTE:
             currentDelta = currentOption.delta
             optimalDelta = optimalOption.delta
-            if currentOption.optionType == option.OptionTypes.CALL:
-                requestedDelta = self.__optCallDelta
-            else:
-                requestedDelta = self.__optPutDelta
-
-            if abs(currentDelta - requestedDelta) < abs(optimalDelta - requestedDelta):
+            if abs(currentDelta - optPutDelta) < abs(optimalDelta - optPutDelta):
                 newOptimalOption = currentOption
         # We should not be able to enter this else.
         # else:
@@ -172,15 +165,15 @@ class StrangleStrat(strategy.Strategy):
         multiple options that meet the criteria, we choose the first one, but we could use some other type of rule.
 
         Attributes:
-          event - Tick data we parse through to determine if we want to create a strangle for the strategy.
+          event: Tick data we parse through to determine if we want to create a putVertical for the strategy.
           portfolioNetLiquidity: Net liquidity of portfolio.
           availableBuyingPower: Amount of buying power available to use.
         Return:
           Dictionary of reasons for why option(s) could not be updated. Empty dictionary if options updated.
         """
         # These variables will be used to keep track of the optimal options as we go through the option chain.
-        optimalCallOpt = None
-        optimalPutOpt = None
+        optimalPutOptionToSell = None
+        optimalPutOptionToBuy = None
 
         # Get the data from the tick event.
         eventData = event.getData()
@@ -196,37 +189,47 @@ class StrangleStrat(strategy.Strategy):
         noUpdateReasonDict = {}
         # Process one option at a time from the option chain (objects of option class).
         for currentOption in eventData:
-            if currentOption.optionType == option.OptionTypes.CALL:
-                updateOption, callOpt, noUpdateReason = self.__updateWithOptimalOption(currentOption, optimalCallOpt)
+            if currentOption.optionType == option.OptionTypes.PUT:
+                # Handle put to buy first.
+                updateOption, putOptToBuy, noUpdateReason = self.__updateWithOptimalOption(
+                    currentOption, optimalPutOptionToBuy, self.__maxPutToBuyDelta, self.__optPutToBuyDelta,
+                    self.__minPutToBuyDelta)
                 if updateOption:
-                    optimalCallOpt = callOpt
-                noUpdateReasonDict['callOption'] = noUpdateReason
-            else:
-                # PUT option
-                updateOption, putOpt, noUpdateReason = self.__updateWithOptimalOption(currentOption, optimalPutOpt)
-                if updateOption:
-                    optimalPutOpt = putOpt
-                noUpdateReasonDict['putOption'] = noUpdateReason
+                    optimalPutOptionToBuy = putOptToBuy
+                if noUpdateReasonDict.get('putToBuy', None) is None or (
+                    noUpdateReasonDict['putToBuy'] != NoUpdateReason.OK):
+                  noUpdateReasonDict['putToBuy'] = noUpdateReason
 
-        # Must check that both a CALL and PUT were found which meet criteria and are in the same expiration.
-        if (optimalPutOpt and optimalCallOpt and optimalPutOpt.expirationDateTime == optimalCallOpt.expirationDateTime
-           and not (optimalPutOpt.strikePrice == optimalCallOpt.strikePrice)):
-            strangleObj = strangle.Strangle(self.orderQuantity, self.contractMultiplier, optimalCallOpt, optimalPutOpt,
-                                            self.buyOrSell)
+                # Handle put to sell.
+                updateOption, putOptToSell, noUpdateReason = self.__updateWithOptimalOption(
+                    currentOption, optimalPutOptionToSell, self.__maxPutToSellDelta, self.__optPutToSellDelta,
+                    self.__minPutToSellDelta)
+                if updateOption:
+                    optimalPutOptionToSell = putOptToSell
+                if noUpdateReasonDict.get('putToSell', None) is None or (
+                    noUpdateReasonDict['putToSell'] != NoUpdateReason.OK):
+                    noUpdateReasonDict['putToSell'] = noUpdateReason
+
+        # Must check that both PUTs were found which are in the same expiration but do not have the same strike price.
+        if (optimalPutOptionToBuy and optimalPutOptionToSell) and (
+            optimalPutOptionToBuy.expirationDateTime == optimalPutOptionToSell.expirationDateTime) and not (
+              optimalPutOptionToBuy.strikePrice == optimalPutOptionToSell.strikePrice):
+            putVerticalObj = putVertical.PutVertical(self.orderQuantity, self.contractMultiplier, optimalPutOptionToBuy,
+                                                     optimalPutOptionToSell, self.buyOrSell)
 
             # There is a case in the input data where the delta values are incorrect, and this results the strike price
-            # of the short put being greater than the strike price of the short call, and this results in negative
-            # buying power. To handle this error case, we return if the buying power is zero or negative.
-            capitalNeeded = strangleObj.getBuyingPower()
+            # of the long put being greater than the strike price of the short put, and this results in negative buying
+            # power. To handle this error case, we return if the buying power is zero or negative.
+            capitalNeeded = putVerticalObj.getBuyingPower()
             if capitalNeeded <= 0:
                 return
 
-            # Calculate opening and closing fees for the strangle.
-            opening_fees = strangleObj.getCommissionsAndFees('open', self.pricingSource,
-                                                             self.pricingSourceConfig)
-            strangleObj.setOpeningFees(opening_fees)
-            strangleObj.setClosingFees(strangleObj.getCommissionsAndFees('close', self.pricingSource,
-                                                                         self.pricingSourceConfig))
+            # Calculate opening and closing fees for the putVertical.
+            opening_fees = putVerticalObj.getCommissionsAndFees('open', self.pricingSource,
+                                                                self.pricingSourceConfig)
+            putVerticalObj.setOpeningFees(opening_fees)
+            putVerticalObj.setClosingFees(putVerticalObj.getCommissionsAndFees('close', self.pricingSource,
+                                                                               self.pricingSourceConfig))
 
             # Update capitalNeeded to include the opening fees.
             capitalNeeded += opening_fees
@@ -241,10 +244,10 @@ class StrangleStrat(strategy.Strategy):
             if numContractsToAdd < 1:
                 return
 
-            strangleObj.setNumContracts(numContractsToAdd)
+            putVerticalObj.setNumContracts(numContractsToAdd)
 
-            # Create signal event to put on strangle strategy and add to queue.
-            signalObj = [strangleObj, self.riskManagement]
+            # Create signal event to put on put vertical strategy and add to queue.
+            signalObj = [putVerticalObj, self.riskManagement]
             event = signalEvent.SignalEvent()
             event.createEvent(signalObj)
             self.__eventQueue.put(event)
