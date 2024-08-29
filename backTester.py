@@ -32,21 +32,21 @@ class BackTestSession(object):
                                        eventQueue=self.eventQueue)
 
     # Parameters for strategy.
-    startDateTime = '01/01/1991'
+    startDateTime = '01/01/1990'
     startDateTimeFormatted = datetime.datetime.strptime(startDateTime, '%m/%d/%Y')
     # Save maxCapitalToUse in the session since the run function requires it.
     self.maxCapitalToUse = decimal.Decimal(0.45)  # Up to 45% of net liq can be used in trades.
     maxCapitalToUsePerTrade = decimal.Decimal(0.30)  # 30% max capital to use per trade / strategy.
     startingCapital = 1000000
     strategyName = 'PUT_VERTICAL_STRAT'
-    riskManagement = 'CLOSE_AT_50_PERCENT'
-    closeDuration = 21  # Number of days from expiration to close the trade.
+    riskManagement = 'CLOSE_AT_50_PERCENT_OR_21_DAYS'
+    closeDuration = 0 # Number of days from expiration to close the trade.
     optPutToBuyDelta = -0.09
-    maxPutToBuyDelta = -0.14
-    minPutToBuyDelta = -0.06
+    maxPutToBuyDelta = -0.1
+    minPutToBuyDelta = -0.005
     optPutToSellDelta = -0.175
-    maxPutToSellDelta = -0.20
-    minPutToSellDelta = -0.12
+    maxPutToSellDelta = -0.25
+    minPutToSellDelta = -0.11
     underlyingTicker = 'SPX'
     orderQuantity = 1
     contractMultiplier = 100
