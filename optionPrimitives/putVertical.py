@@ -280,7 +280,6 @@ class PutVertical(optionPrimitive.OptionPrimitive):
         putToSellCreditDebit = putToSell.tradePrice
         totCreditDebit = (putToBuyCreditDebit + putToSellCreditDebit) * self.__contractMultiplier
 
-        # TODO(msantoro): This should be in the putVerticalOnDownMoveStrat and not here.
         # This check is here to prevent potential data errors in the CSV.
         if totCreditDebit <= 0:
             logging.warning('Total credit/debit <=0. Check bid/ask spread in CSV data for errors.')

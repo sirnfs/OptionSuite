@@ -211,7 +211,6 @@ class NakedPut(optionPrimitive.OptionPrimitive):
         for currentOption in tickData:
             if (currentOption.strikePrice == putStrike and currentOption.expirationDateTime == putExpiration and (
                currentOption.optionType == option.OptionTypes.PUT)):
-                # TODO: is there not actually an optionType in currentOption?
                 matchingPutToBuyOrSellOption = currentOption
                 break
 
