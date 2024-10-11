@@ -280,22 +280,20 @@ class PutVertical(optionPrimitive.OptionPrimitive):
         putToSellCreditDebit = putToSell.tradePrice
         totCreditDebit = (putToBuyCreditDebit + putToSellCreditDebit) * self.__contractMultiplier
 
-        # This check is here to prevent potential data errors in the CSV.
-        if totCreditDebit <= 0:
-            logging.warning('Total credit/debit <=0. Check bid/ask spread in CSV data for errors.')
-            logging.warning('Put to buy: %s', putToBuy)
-            logging.warning('Put to sell: %s', putToSell)
-            return False
-
         # Express totProfitLoss as a percentage.
         percentProfitLoss = (totProfitLoss / totCreditDebit) * 100
 
-        # This is a CSV data error case. Return False if the %profit is > 100 so that option is not updated, and the
-        # option will be removed in portfolio.py.
-        if abs(percentProfitLoss) > 100:
-            logging.warning('Percent profit was greater than 100; cannot update vertical.')
+        # If we are selling the putVertical (short put vertical), the percent profit/loss cannot be greater
+        # than 100. This can happen if the input data is bad. For example, we have seen that the settlementPrice
+        # is 0 with zero greeks and other strange values. For the short put vertical, we saw the option price
+        # go down when the underlying went up, which should never happen.
+        if (self.__buyOrSell == optionPrimitive.TransactionType.SELL and percentProfitLoss > 100) or (
+            self.__buyOrSell == optionPrimitive.TransactionType.BUY and percentProfitLoss < 100):
+            logging.warning('Percent profit/loss was greater than 100; cannot update vertical.')
             logging.warning('Put to buy: %s', putToBuy)
+            logging.warning('Chosen put to buy: %s', matchingPutToBuyOption)
             logging.warning('Put to sell: %s', putToSell)
+            logging.warning('Chosen put to sell: %s', matchingPutToSellOption)
             return False
 
         # Update option intrinsics.

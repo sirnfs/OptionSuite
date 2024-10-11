@@ -1,4 +1,4 @@
-symbol,exchange,company_name,date,stock_price_close,option_symbol,option_expiration,strike,call_put,style,ask,bid,mean_price,settlement,iv,volume,open_interest,stock_price_for_iv,forward_price,isinterpolated,delta,vega,gamma,theta,rho
+symbol,exchange,company_name,date,stock_price_close,option_symbol,option_expiration,strike,call/put,style,ask,bid,mean_price,settlement,iv,volume,open_interest,stock_price_for_iv,forward_price,isinterpolated,delta,vega,gamma,theta,rho
 AAPL,NASDAQ,APPLE INC,8/7/2014,94.48,AAPL  140808C00055000,8/8/2014,55,C,A,40.45,38.4,39.421,0,0.577382,0,0,94.48,,*,1,0,0,-0.000242,0.001507
 AAPL,NASDAQ,APPLE INC,8/7/2014,94.48,AAPL  140808P00055000,8/8/2014,55,P,A,0.01,0,0,0,0.577382,0,0,94.48,,*,0,0,0,0,0
 AAPL,NASDAQ,APPLE INC,8/7/2014,94.48,AAPL  140808C00060000,8/8/2014,60,C,A,35.45,33.4,34.425,0,0.577382,0,0,94.48,,*,1,0,0,-0.000264,0.001644

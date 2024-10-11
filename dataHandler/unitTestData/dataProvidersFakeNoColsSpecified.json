@@ -4,7 +4,7 @@
     "underlyingTicker": "symbol",
     "exchangeCode": "exchange",
     "optionSymbol": "option_symbol",
-    "optionType": "call_put",
+    "optionType": "call/put",
     "strikePrice": "strike",
     "underlyingPrice": "stock_price_close",
     "askPrice": "ask",

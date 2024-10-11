@@ -36,7 +36,6 @@ class PutVerticalStrat(strategy.Strategy):
         minPutToSellDelta:  Minimum delta for the put to sell.
 
       General strategy attributes:
-        startDateTime:  Date/time to start the backtest.
         underlyingTicker:  Which underlying to use for the strategy.
         orderQuantity:  Number of verticals to sell.
         contractMultiplier: scaling factor for number of "shares" represented by an option or future. (E.g. 100 for
@@ -46,20 +45,23 @@ class PutVerticalStrat(strategy.Strategy):
         pricingSourceConfigFile:  File path to the JSON config file for commission / fees.
 
       Optional attributes:
+        startDateTime:  Date/time to start the backtest.
         optimalDTE:  Optimal number of days before expiration to put on strategy.
         minimumDTE:  Minimum number of days before expiration to put on strategy.
         maximumDTE: Maximum days to expiration to put on strategy.
         maxBidAsk:  Maximum price to allow between bid and ask prices of option (for any strike or put/call).
         maxCapitalToUsePerTrade: percent (as a decimal) of portfolio value we want to use per trade.
+        minCreditDebit: Minimum credit / debit to receive upon trade entry.
     """
 
     def __init__(self, eventQueue: queue.Queue, optPutToBuyDelta: float, maxPutToBuyDelta: float,
                  minPutToBuyDelta: float, optPutToSellDelta: float, maxPutToSellDelta: float, minPutToSellDelta: float,
                  underlyingTicker: Text, orderQuantity: int, contractMultiplier: int,
                  riskManagement: riskManagement.RiskManagement, pricingSource: Text, pricingSourceConfigFile: Text,
-                 optimalDTE: Optional[int] = None, minimumDTE: Optional[int] = None, maximumDTE: Optional[int] = None,
+                 startDateTime: Optional[datetime.datetime] = None, optimalDTE: Optional[int] = None,
+                 minimumDTE: Optional[int] = None, maximumDTE: Optional[int] = None,
                  maxBidAsk: Optional[decimal.Decimal] = None, maxCapitalToUsePerTrade: Optional[decimal.Decimal] = None,
-                 startDateTime: Optional[datetime.datetime] = None):
+                 minCreditDebit: Optional[decimal.Decimal] = None):
 
         self.__eventQueue = eventQueue
         self.__optPutToBuyDelta = optPutToBuyDelta
@@ -82,6 +84,7 @@ class PutVerticalStrat(strategy.Strategy):
         self.maximumDTE = maximumDTE
         self.maxBidAsk = maxBidAsk
         self.maxCapitalToUsePerTrade = maxCapitalToUsePerTrade
+        self.minCreditDebit = minCreditDebit
 
         # Open JSON file and select the pricingSource.
         self.pricingSourceConfig = None
@@ -210,9 +213,19 @@ class PutVerticalStrat(strategy.Strategy):
                     noUpdateReasonDict['putToSell'] != NoUpdateReason.OK):
                     noUpdateReasonDict['putToSell'] = noUpdateReason
 
+        if not optimalPutOptionToBuy or not optimalPutOptionToSell:
+            logging.warning('Could not find both an optimal put to buy and optimal put to sell.')
+            return noUpdateReasonDict
+
+        # If we require a minimum credit / debit to put on the trade, check here.
+        if self.minCreditDebit:
+            totalCreditDebit = -optimalPutOptionToBuy.tradePrice + optimalPutOptionToSell.tradePrice
+            if totalCreditDebit < self.minCreditDebit:
+                logging.warning('Total credit for the trade was less than the minCreditDebit specified.')
+                return
+
         # Must check that both PUTs were found which are in the same expiration but do not have the same strike price.
-        if (optimalPutOptionToBuy and optimalPutOptionToSell) and (
-            optimalPutOptionToBuy.expirationDateTime == optimalPutOptionToSell.expirationDateTime) and not (
+        if (optimalPutOptionToBuy.expirationDateTime == optimalPutOptionToSell.expirationDateTime) and not (
               optimalPutOptionToBuy.strikePrice == optimalPutOptionToSell.strikePrice):
             putVerticalObj = putVertical.PutVertical(self.orderQuantity, self.contractMultiplier, optimalPutOptionToBuy,
                                                      optimalPutOptionToSell, self.buyOrSell)
@@ -222,6 +235,7 @@ class PutVerticalStrat(strategy.Strategy):
             # power. To handle this error case, we return if the buying power is zero or negative.
             capitalNeeded = putVerticalObj.getBuyingPower()
             if capitalNeeded <= 0:
+                logging.warning('Capital needed to put on trade was <= 0; likely a data problem.')
                 return
 
             # Calculate opening and closing fees for the putVertical.
@@ -252,6 +266,6 @@ class PutVerticalStrat(strategy.Strategy):
             event.createEvent(signalObj)
             self.__eventQueue.put(event)
         else:
-            logging.info('Could not execute strategy. Reason: %s', noUpdateReasonDict)
+            logging.warning('Could not execute strategy. Reason: %s', noUpdateReasonDict)
 
         return noUpdateReasonDict

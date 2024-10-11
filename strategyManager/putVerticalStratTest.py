@@ -76,8 +76,8 @@ class TestPutVerticalStrategy(unittest.TestCase):
             self.signalEventQueue, self.optPutToBuyDelta, self.maxPutToBuyDelta, self.minPutToBuyDelta,
             self.optPutToSellDelta, self.maxPutToSellDelta, self.minPutToSellDelta, self.underlyingTicker,
             self.orderQuantity, self.contractMultiplier, self.riskManagement, self.pricingSource,
-            self.pricingSourceConfigFile, self.optimalDTE, self.minimumDTE, self.maximumDTE, maxBidAsk=self.maxBidAsk,
-            maxCapitalToUsePerTrade=self.maxCapitalToUsePerTrade, startDateTime=self.startDateTime)
+            self.pricingSourceConfigFile, self.startDateTime, self.optimalDTE, self.minimumDTE, self.maximumDTE,
+            maxBidAsk=self.maxBidAsk,maxCapitalToUsePerTrade=self.maxCapitalToUsePerTrade)
         self.portfolioNetLiquidity = decimal.Decimal(100000)
         self.availableBuyingPower = decimal.Decimal(50000)
 
@@ -94,8 +94,8 @@ class TestPutVerticalStrategy(unittest.TestCase):
             self.signalEventQueue, self.optPutToBuyDelta, self.maxPutToBuyDelta, self.minPutToBuyDelta,
             self.optPutToSellDelta, self.maxPutToSellDelta, self.minPutToSellDelta, self.underlyingTicker,
             self.orderQuantity, self.contractMultiplier, self.riskManagement, self.pricingSource,
-            self.pricingSourceConfigFile, self.optimalDTE, self.minimumDTE, self.maximumDTE, maxBidAsk=self.maxBidAsk,
-            maxCapitalToUsePerTrade=self.maxCapitalToUsePerTrade, startDateTime=startDateTime)
+            self.pricingSourceConfigFile, startDateTime, self.optimalDTE, self.minimumDTE, self.maximumDTE,
+            maxBidAsk=self.maxBidAsk, maxCapitalToUsePerTrade=self.maxCapitalToUsePerTrade)
         putOptionToSell = self.optionChain.getData()[1]
         putOptionToBuy = self.optionChain.getData()[3]
         testOptionChain = [putOptionToSell, putOptionToBuy]
@@ -356,6 +356,40 @@ class TestPutVerticalStrategy(unittest.TestCase):
                           'putToSell': putVerticalStrat.NoUpdateReason.OK}
         self.assertEqual(self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower),
                          expectedReason)
+
+    def testCheckForSignalTotalDebitCreditLessThanMinCredit(self):
+        """Tests that no signal event is created when the debit/credit is less than minCreditDebit."""
+        putOptionToSell = self.optionChain.getData()[1]
+        putOptionToBuy = self.optionChain.getData()[3]
+
+        # Set expiration to greater than self.minimumDTE.
+        putOptionToSell.expirationDateTime = putOptionToSell.dateTime + timedelta(days=(self.minimumDTE + 1))
+        putOptionToBuy.expirationDateTime = putOptionToBuy.dateTime + timedelta(days=(self.minimumDTE + 2))
+
+        # Set put and call delta to be the desired values.
+        putOptionToSell.delta = self.optPutToSellDelta
+        putOptionToBuy.delta = self.optPutToBuyDelta
+
+        # Set the bidPrice and askPrice such that the difference is less than self.maxBidAsk.
+        epsilon = decimal.Decimal(0.001)
+        putOptionToSell.bidPrice = decimal.Decimal(0.00)
+        putOptionToSell.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+        putOptionToBuy.bidPrice = decimal.Decimal(0.00)
+        putOptionToBuy.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+        testOptionChain = [putOptionToSell, putOptionToBuy]
+        event = tickEvent.TickEvent()
+        event.createEvent(testOptionChain)
+
+        # Set minCreditDebit to a large number to test that creation of the strategy fails.
+        curStrategy = putVerticalStrat.PutVerticalStrat(
+            self.signalEventQueue, self.optPutToBuyDelta, self.maxPutToBuyDelta, self.minPutToBuyDelta,
+            self.optPutToSellDelta, self.maxPutToSellDelta, self.minPutToSellDelta, self.underlyingTicker,
+            self.orderQuantity, self.contractMultiplier, self.riskManagement, self.pricingSource,
+            self.pricingSourceConfigFile, self.startDateTime, self.optimalDTE, self.minimumDTE, self.maximumDTE,
+            maxBidAsk=self.maxBidAsk, maxCapitalToUsePerTrade=self.maxCapitalToUsePerTrade, minCreditDebit=1000)
+        curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
+
+        self.assertEqual(self.signalEventQueue.qsize(), 0)
 
     def testCheckForSignalNumContractLessThanOne(self):
         """Tests that no signal event is created when the number of contracts is less than one."""

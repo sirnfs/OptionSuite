@@ -10,7 +10,7 @@
     "underlyingPrice": "stock_price_close",
     "askPrice": "ask",
     "bidPrice": "bid",
-    "settlementPrice": "",
+    "settlementPrice": "mean_price",
     "tradePrice": "",
     "tradeDataTime": "",
     "impliedVol": "iv",

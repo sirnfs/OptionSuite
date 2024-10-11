@@ -52,6 +52,7 @@ class StrangleStrat(strategy.Strategy):
         maximumDTE: Maximum days to expiration to put on strategy.
         maxBidAsk:  Maximum price to allow between bid and ask prices of option (for any strike or put/call).
         maxCapitalToUsePerTrade: percent (as a decimal) of portfolio value we want to use per trade.
+        minCreditDebit: Minimum credit / debit to receive upon trade entry.
     """
 
     def __init__(self, eventQueue: queue.Queue, optCallDelta: float, maxCallDelta: float, minCallDelta,
@@ -60,7 +61,7 @@ class StrangleStrat(strategy.Strategy):
                  riskManagement: riskManagement.RiskManagement, pricingSource: Text, pricingSourceConfigFile: Text,
                  optimalDTE: Optional[int] = None, minimumDTE: Optional[int] = None, maximumDTE: Optional[int] = None,
                  maxBidAsk: Optional[decimal.Decimal] = None, maxCapitalToUsePerTrade: Optional[decimal.Decimal] = None,
-                 startDateTime: Optional[datetime.datetime] = None):
+                 startDateTime: Optional[datetime.datetime] = None, minCreditDebit: Optional[decimal.Decimal] = None):
 
         self.__eventQueue = eventQueue
         self.__optCallDelta = optCallDelta
@@ -83,6 +84,7 @@ class StrangleStrat(strategy.Strategy):
         self.maximumDTE = maximumDTE
         self.maxBidAsk = maxBidAsk
         self.maxCapitalToUsePerTrade = maxCapitalToUsePerTrade
+        self.minCreditDebit = minCreditDebit
 
         # Open JSON file and select the pricingSource.
         self.pricingSourceConfig = None
@@ -208,8 +210,19 @@ class StrangleStrat(strategy.Strategy):
                     optimalPutOpt = putOpt
                 noUpdateReasonDict['putOption'] = noUpdateReason
 
+        if not optimalPutOpt or not optimalCallOpt:
+            logging.warning('Could not find both an optimal put and call.')
+            return noUpdateReasonDict
+
+        # If we require a minimum credit / debit to put on the trade, check here.
+        if self.minCreditDebit:
+            totalCreditDebit = optimalCallOpt.tradePrice + optimalPutOpt.tradePrice
+            if totalCreditDebit < self.minCreditDebit:
+                logging.warning('Total credit for the trade was less than the minCreditDebit specified.')
+                return
+
         # Must check that both a CALL and PUT were found which meet criteria and are in the same expiration.
-        if (optimalPutOpt and optimalCallOpt and optimalPutOpt.expirationDateTime == optimalCallOpt.expirationDateTime
+        if (optimalPutOpt.expirationDateTime == optimalCallOpt.expirationDateTime
            and not (optimalPutOpt.strikePrice == optimalCallOpt.strikePrice)):
             strangleObj = strangle.Strangle(self.orderQuantity, self.contractMultiplier, optimalCallOpt, optimalPutOpt,
                                             self.buyOrSell)
@@ -249,6 +262,6 @@ class StrangleStrat(strategy.Strategy):
             event.createEvent(signalObj)
             self.__eventQueue.put(event)
         else:
-            logging.info('Could not execute strategy. Reason: %s', noUpdateReasonDict)
+            logging.warning('Could not execute strategy. Reason: %s', noUpdateReasonDict)
 
         return noUpdateReasonDict
