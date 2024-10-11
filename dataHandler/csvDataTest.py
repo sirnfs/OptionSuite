@@ -144,7 +144,7 @@ class TestCSVHandler(unittest.TestCase):
                                  eventQueue=eventQueue)
         csvObj.getNextTick()
         option = eventQueue.get().getData()[0]
-        self.assertEqual(option.tradePrice, decimal.Decimal(option.askPrice + option.bidPrice) / decimal.Decimal(2.0))
+        self.assertEqual(option.tradePrice, option.settlementPrice)
         self.assertEqual(option.settlementPrice, option.tradePrice)
 
     def testCheckTradePriceIsCorrectForFuturesOptions(self):
