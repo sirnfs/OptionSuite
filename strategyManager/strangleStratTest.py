@@ -420,6 +420,46 @@ class TestStrangleStrategy(unittest.TestCase):
         self.assertEqual(self.curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower),
                          expectedReason)
 
+    def testCheckForSignalTotalDebitCreditLessThanMinCredit(self):
+        """Tests that no signal event is created when the debit/credit is less than minCreditDebit."""
+        callOption = self.optionChain.getData()[0]
+        putOption = self.optionChain.getData()[1]
+
+        # Set expiration to be the same and greater than self.minimumDTE.
+        callOption.expirationDateTime = callOption.dateTime + timedelta(
+            days=(self.minimumDTE + 1))
+        putOption.expirationDateTime = putOption.dateTime + timedelta(
+            days=(self.minimumDTE + 1))
+
+        # Set put deltas. We use these delta values to check that the options with the optimal DTE were chosen.
+        callOption.delta = self.optCallDelta
+        putOption.delta = self.optPutDelta
+
+        # Set the bidPrice and askPrice such that the difference is less than self.maxBidAsk.
+        epsilon = decimal.Decimal(0.001)
+        callOption.bidPrice = decimal.Decimal(0.00)
+        callOption.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+        putOption.bidPrice = decimal.Decimal(0.00)
+        putOption.askPrice = decimal.Decimal(self.maxBidAsk - epsilon)
+
+        testOptionChain = [callOption, putOption]
+        event = tickEvent.TickEvent()
+        event.createEvent(testOptionChain)
+
+        # Set minCreditDebit to a large number to test that creation of the strategy fails.
+        curStrategy = StrangleStrat.StrangleStrat(self.signalEventQueue, self.optCallDelta, self.maxCallDelta,
+                                                  self.minCallDelta, self.optPutDelta, self.maxPutDelta,
+                                                  self.minPutDelta, self.buyOrSell, self.underlyingTicker,
+                                                  self.orderQuantity, self.contractMultiplier, self.riskManagement,
+                                                  self.pricingSource, self.pricingSourceConfigFile,
+                                                  self.optimalDTE, self.minimumDTE, maxBidAsk=self.maxBidAsk,
+                                                  maxCapitalToUsePerTrade=self.maxCapitalToUsePerTrade,
+                                                  startDateTime=self.startDateTime, minCreditDebit=1000)
+
+
+        curStrategy.checkForSignal(event, self.portfolioNetLiquidity, self.availableBuyingPower)
+        self.assertEqual(self.signalEventQueue.qsize(), 0)
+
     def testCheckForSignalNumContractLessThanOne(self):
         """Tests that no signal event is created when the number of contracts is less than one."""
         callOption = self.optionChain.getData()[0]
