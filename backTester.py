@@ -26,7 +26,7 @@ class BackTestSession(object):
         # Create CsvData class object.
         dataProviderPath = '/Users/msantoro/PycharmProjects/Backtester/dataHandler/dataProviders.json'
         dataProvider = 'iVolatility'
-        filename = '/Users/msantoro/PycharmProjects/Backtester/sampleData/spx_sample_ivolatility.csv'#'/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/combinedCSV.csv'
+        filename = '/Users/msantoro/PycharmProjects/Backtester/sampleData/spx_sample_ivolatility.csv'
         self.dataHandler = csvData.CsvData(csvPath=filename, dataProviderPath=dataProviderPath,
                                            dataProvider=dataProvider, eventQueue=self.eventQueue)
 
