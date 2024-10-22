@@ -25,8 +25,8 @@ class BackTestSession(object):
 
         # Create CsvData class object.
         dataProviderPath = '/Users/msantoro/PycharmProjects/Backtester/dataHandler/dataProviders.json'
-        dataProvider = 'iVolatility'  # iVolatility_futures'
-        filename = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/combinedCSV.csv'
+        dataProvider = 'iVolatility'
+        filename = '/Users/msantoro/PycharmProjects/Backtester/sampleData/spx_sample_ivolatility.csv'#'/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX/combinedCSV.csv'
         self.dataHandler = csvData.CsvData(csvPath=filename, dataProviderPath=dataProviderPath,
                                            dataProvider=dataProvider, eventQueue=self.eventQueue)
 
@@ -57,7 +57,7 @@ class BackTestSession(object):
 
         # Set up portfolio and position monitoring.
         self.positionMonitoring = defaultdict(list)
-        pricingSource = 'tastyworks'  # 'tastyworks_futures'
+        pricingSource = 'tastyworks'
         pricingSourceConfigFile = '/Users/msantoro/PycharmProjects/Backtester/dataHandler/pricingConfig.json'
         self.portfolioManager = portfolio.Portfolio(decimal.Decimal(startingCapital), self.maxCapitalToUse,
                                                     maxCapitalToUsePerTrade, positionMonitoring=self.positionMonitoring)
