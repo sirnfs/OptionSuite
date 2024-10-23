@@ -49,9 +49,9 @@ You can request different time periods.  A large time period such as 1990 to 201
 Once you have downloaded the data, simply update the three lines below, and you are ready to run *backTester.py*.
 
 ```
+dataProviderPath = '/Users/msantoro/PycharmProjects/Backtester/dataHandler/dataProviders.json'
 dataProvider = 'iVolatility'
-directory = '/Users/msantoro/PycharmProjects/Backtester/marketData/iVolatility/SPX'
-filename = 'combinedCSV.csv'
+filename = '/Users/msantoro/PycharmProjects/Backtester/sampleData/spx_sample_ivolatility.csv'
 ```
 
 ## Visualizing the Data
