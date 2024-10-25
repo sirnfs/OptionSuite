@@ -1,7 +1,7 @@
 # OptionSuite
 Option / stock strategy backtester and live trader* framework.
 
-To get started quickly, see the tutorial video below.
+To get started quickly, click the image below to bring up the tutorial video on YouTube.
 
 [![Video Tutorial](https://img.youtube.com/vi/gvzlKoPj57A/0.jpg)](https://www.youtube.com/watch?v=gvzlKoPj57A)
 
