@@ -1,6 +1,10 @@
 # OptionSuite
 Option / stock strategy backtester and live trader* framework.
 
+To get started quickly, see the tutorial video below.
+
+[![Video Tutorial](https://img.youtube.com/vi/gvzlKoPj57A/0.jpg)](https://www.youtube.com/watch?v=gvzlKoPj57A)
+
 [Getting started](#getting-started) decribes what you need in order to get started backtesting.
 
 Please note that you need to purchase a [data package](#getting-the-data) in order to use this library since the sample data is quite limited.
