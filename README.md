@@ -5,6 +5,13 @@ To get started quickly, click the image below to bring up the tutorial video on 
 
 [![Video Tutorial](https://img.youtube.com/vi/gvzlKoPj57A/0.jpg)](https://www.youtube.com/watch?v=gvzlKoPj57A)
 
+Press / tutorials by others:
+
+[Pipkekit](https://pipekit.io/blog/options-backtesting-in-python-an-introductory-walkthrough)
+
+[Medium](https://medium.com/coinmonks/options-backtesting-in-python-an-introductory-walkthrough-fa14b32642ef)
+
+
 [Getting started](#getting-started) decribes what you need in order to get started backtesting.
 
 Please note that you need to purchase a [data package](#getting-the-data) in order to use this library since the sample data is quite limited.
