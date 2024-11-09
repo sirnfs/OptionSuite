@@ -33,7 +33,7 @@ class TestPortfolio(unittest.TestCase):
         self.__strangleObj = strangle.Strangle(orderQuantity=1, contractMultiplier=100, callOpt=callOpt, putOpt=putOpt,
                                                buyOrSell=optionPrimitive.TransactionType.SELL)
         self.pricingSource = 'tastyworks'
-        with open('/Users/msantoro/PycharmProjects/Backtester/dataHandler/pricingConfig.json') as config:
+        with open('./dataHandler/pricingConfig.json') as config:
             fullConfig = json.load(config)
             self.pricingSourceConfig = fullConfig[self.pricingSource]
         self.__strangleObj.setOpeningFees(self.__strangleObj.getCommissionsAndFees('open', self.pricingSource,
