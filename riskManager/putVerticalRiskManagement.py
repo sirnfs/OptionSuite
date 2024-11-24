@@ -1,4 +1,6 @@
+import decimal
 import enum
+import logging
 from riskManager import riskManagement
 from optionPrimitives import optionPrimitive
 from typing import Optional
@@ -34,11 +36,11 @@ class PutVerticalRiskManagement(riskManagement.RiskManagement):
         :param currentPosition: Current position in the portfolio.
         """
         if self.__closeDuration is not None:
-            # Closes position out when number of days left is equal to closeDuration.
+            # Closes position out when number of days left is less than or equal to closeDuration.
             if currentPosition.calcProfitLossPercentage() >= 50 or (
-               currentPosition.getNumberOfDaysLeft() == self.__closeDuration):
+               currentPosition.getNumberOfDaysLeft() <= self.__closeDuration):
                 return True
-            # This is a backup if an option is chosen where numberofdaysleft < 21.
+            # This is a backup if an option is chosen where numberofdaysleft <= 1.
             if currentPosition.getNumberOfDaysLeft() <= 1:
                 # Indicates that the options are expiring on (or near) this date.
                 return True
@@ -55,24 +57,14 @@ class PutVerticalRiskManagement(riskManagement.RiskManagement):
                 # Indicates that the options are expiring on (or near) this date.
                 return True
         elif self.__managementType == PutVerticalManagementStrategyTypes.CLOSE_AT_50_PERCENT_OR_21_DAYS:
-            if currentPosition.calcProfitLossPercentage() >= 50 or currentPosition.getNumberOfDaysLeft() == 21:
-                return True
-            # This is a backup in an option is chosen where numberofdaysleft < 21.
-            if currentPosition.getNumberOfDaysLeft() <= 1:
-                # Indicates that the options are expiring on (or near) this date.
+            if currentPosition.calcProfitLossPercentage() >= 50 or currentPosition.getNumberOfDaysLeft() <= 21:
                 return True
         elif self.__managementType == PutVerticalManagementStrategyTypes.CLOSE_AT_50_PERCENT_OR_21_DAYS_OR_HALFLOSS:
-            if currentPosition.calcProfitLossPercentage() >= 50 or currentPosition.getNumberOfDaysLeft() == 21 or (
+            if currentPosition.calcProfitLossPercentage() >= 50 or currentPosition.getNumberOfDaysLeft() <= 21 or (
                currentPosition.calcProfitLossPercentage() <= -50):
                 return True
-            if currentPosition.getNumberOfDaysLeft() <= 1:
-                # Indicates that the options are expiring on (or near) this date.
-                return True
         elif self.__managementType == PutVerticalManagementStrategyTypes.CLOSE_AT_21_DAYS:
-            if currentPosition.getNumberOfDaysLeft() == 21:
-                return True
-            if currentPosition.getNumberOfDaysLeft() <= 1:
-                # Indicates that the options are expiring on (or near) this date.
+            if currentPosition.getNumberOfDaysLeft() <= 21:
                 return True
         else:
             raise NotImplementedError('No management strategy was specified or has not yet been implemented.')
