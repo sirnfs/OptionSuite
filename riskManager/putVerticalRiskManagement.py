@@ -27,7 +27,7 @@ class PutVerticalRiskManagement(riskManagement.RiskManagement):
         self.__managementType = managementType
         self.__closeDuration = closeDuration
 
-    def managePosition(self, currentPosition: optionPrimitive, previousProfitLossForPosition: decimal.Decimal) -> bool:
+    def managePosition(self, currentPosition: optionPrimitive) -> bool:
         """Manages the current position in the portfolio.
         Managing the position means indicating whether the position should be removed from the portfolio.
         In addition, we could create another signalEvent here if we want to do something like roll the strategy to
