@@ -32,7 +32,7 @@ class CsvData(dataHandler.DataHandler):
         self.__dataConfig = None
         self.__csvReader = None
         self.__csvColumnNames = None
-        self.__dateColumnIndex = None
+        self.__dateColumnName = None
         self.__nextTimeDateRow = None
         self.__dataProvider = dataProvider
         self.__eventQueue = eventQueue
@@ -70,8 +70,8 @@ class CsvData(dataHandler.DataHandler):
                 'The requested data provider: %s was not found in dataProviders.json' % self.__dataProvider)
 
         # Check that the number of columns in the CSV matches the number specified by the config file.
-        self.__csvReader = csv.reader(fileHandle)
-        self.__csvColumnNames = next(self.__csvReader)
+        self.__csvReader = csv.DictReader(fileHandle)
+        self.__csvColumnNames = self.__csvReader.fieldnames
         numberCsvColumns = len(self.__csvColumnNames)
         if 'number_columns' not in dataConfig[self.__dataProvider]:
             raise ValueError('number_columns was not provided in dataProviders.json file.')
@@ -87,7 +87,7 @@ class CsvData(dataHandler.DataHandler):
         """
         rowList = []
         for row in self.__csvReader:
-            if datetime.datetime.strptime(row[self.__dateColumnIndex],
+            if datetime.datetime.strptime(row[self.__dateColumnName],
                                           self.__dataConfig[self.__dataProvider][
                                               'date_time_format']) == self.__curTimeDate:
                 rowList.append(row)
@@ -103,21 +103,18 @@ class CsvData(dataHandler.DataHandler):
 
           :return Pandas dataframe with option chain data.
         """
+        self.__dateColumnName = self.__dataConfig[self.__dataProvider]['column_names']['dateTime']
+        if not self.__dateColumnName in self.__csvColumnNames:
+            raise TypeError('The dateColumnName was not found in the CSV.')
+
         # Get the first date from the CSV if self.__curTimeDate is None.
-        dateColumnName = self.__dataConfig[self.__dataProvider]['column_names']['dateTime']
         if self.__curTimeDate is None:
             # Find the index of the date column in the header row of the CSV.
-            for index, column in enumerate(self.__csvColumnNames):
-                if column == dateColumnName:
-                    self.__dateColumnIndex = index
-            if self.__dateColumnIndex is None:
-                raise TypeError('The dateColumnName was not found in the CSV.')
-
             rowList = []
             # Get the next row of the CSV and convert the date column to a datetime object.
             row = next(self.__csvReader)
             rowList.append(row)
-            self.__curTimeDate = datetime.datetime.strptime(row[self.__dateColumnIndex],
+            self.__curTimeDate = datetime.datetime.strptime(row[self.__dateColumnName],
                                                             self.__dataConfig[self.__dataProvider]['date_time_format'])
             # Get the rest of the rows that match the curTimeDate.
             rowList.extend(self.__getMatchingRows())
@@ -130,7 +127,7 @@ class CsvData(dataHandler.DataHandler):
                 logging.warning('None was returned for the nextTimeDateRow in the CSV reader.')
                 return pd.DataFrame()
             # Get the date / time from the previously stored row.
-            self.__curTimeDate = datetime.datetime.strptime(self.__nextTimeDateRow[self.__dateColumnIndex],
+            self.__curTimeDate = datetime.datetime.strptime(self.__nextTimeDateRow[self.__dateColumnName],
                                                             self.__dataConfig[self.__dataProvider]['date_time_format'])
 
             # Get all the CSV rows for the curTimeDate.

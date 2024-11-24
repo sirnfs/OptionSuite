@@ -107,7 +107,8 @@ class PutVerticalStrat(strategy.Strategy):
         """
         # TODO: Add support for selecting specific expiration cycles (e.g., quarterly, monthly).
 
-        # Check that we are using the right ticker symbol.
+        # Check that we are using the right ticker symbol. This will match any substring; e.g., SPXPM will be matched
+        # if underlyingTicker = SPX.
         if self.underlyingTicker not in currentOption.underlyingTicker:
             return (False, optimalOption, NoUpdateReason.WRONG_TICKER)
 

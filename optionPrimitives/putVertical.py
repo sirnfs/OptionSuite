@@ -149,8 +149,7 @@ class PutVertical(optionPrimitive.OptionPrimitive):
         return percentProfitLoss
 
     def getBuyingPower(self) -> decimal.Decimal:
-        """The formula for calculating buying power is based off of TastyWorks. Note that this only applies to equity
-        options (not futures options).
+        """The formula for calculating buying power is based off of TastyWorks.
         buying power short put vertical = distance between strikes * contract multiplier +
                                           (short put option price - long put option price)
         buying power long put vertical = difference between cost of two options * contract multiplier

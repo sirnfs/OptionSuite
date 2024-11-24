@@ -28,15 +28,17 @@ class StrangleRiskManagement(riskManagement.RiskManagement):
             if currentPosition.getNumberOfDaysLeft() <= 1:
                 # Indicates that the options are expiring on (or near) this date.
                 return True
+            # This is a backup if an option is chosen where numberofdaysleft < 21.
+            if currentPosition.getNumberOfDaysLeft() <= 1:
+                # Indicates that the options are expiring on (or near) this date.
+                return True
         elif self.__managementType == StrangleManagementStrategyTypes.CLOSE_AT_50_PERCENT:
             if currentPosition.calcProfitLossPercentage() >= 50:
                 return True
             if currentPosition.getNumberOfDaysLeft() <= 1:
                 return True
         elif self.__managementType == StrangleManagementStrategyTypes.CLOSE_AT_50_PERCENT_OR_21_DAYS:
-            if currentPosition.calcProfitLossPercentage() >= 50 or currentPosition.getNumberOfDaysLeft() == 21:
-                return True
-            if currentPosition.getNumberOfDaysLeft() <= 1:
+            if currentPosition.calcProfitLossPercentage() >= 50 or currentPosition.getNumberOfDaysLeft() <= 21:
                 return True
         else:
             raise NotImplementedError('No management strategy was specified or has not yet been implemented.')
