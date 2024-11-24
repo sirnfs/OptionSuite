@@ -28,7 +28,7 @@ class StrangleRiskManagement(riskManagement.RiskManagement):
             if currentPosition.getNumberOfDaysLeft() <= 1:
                 # Indicates that the options are expiring on (or near) this date.
                 return True
-            # This is a backup if an option is chosen where numberofdaysleft < 21.
+            # This is a backup if an option is chosen where numberofdaysleft <= 1.
             if currentPosition.getNumberOfDaysLeft() <= 1:
                 # Indicates that the options are expiring on (or near) this date.
                 return True
