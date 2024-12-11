@@ -5,7 +5,9 @@ To get started quickly, click the image below to bring up the tutorial video on 
 
 [![Video Tutorial](https://img.youtube.com/vi/gvzlKoPj57A/0.jpg)](https://www.youtube.com/watch?v=gvzlKoPj57A)
 
-Press / tutorials by others:
+# Looking for a winning strategy developed by this backtester? Check out [IncreaseYourStockReturns](https://www.increaseyourstockreturns.com/)!
+
+# Press / tutorials by others:
 
 [Pipkekit](https://pipekit.io/blog/options-backtesting-in-python-an-introductory-walkthrough)
 
