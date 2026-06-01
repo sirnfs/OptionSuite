@@ -5,6 +5,9 @@ To get started quickly, click the image below to bring up the tutorial video on 
 
 [![Video Tutorial](https://img.youtube.com/vi/gvzlKoPj57A/0.jpg)](https://www.youtube.com/watch?v=gvzlKoPj57A)
 
+# Join a top-tier fund using a strategy created by this backtester:
+[Join here - SS Capital Group](https://thesscapitalgroup.com/)
+
 # Press / tutorials by others:
 
 [Pipkekit](https://pipekit.io/blog/options-backtesting-in-python-an-introductory-walkthrough)
